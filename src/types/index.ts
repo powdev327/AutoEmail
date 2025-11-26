@@ -18,6 +18,20 @@ export interface Email {
   geoLocation: string | null;
   createdAt: Date;
   updatedAt: Date;
+  events?: EmailEvent[];
+}
+
+export interface EmailEvent {
+  id: string;
+  emailId: string;
+  event: string;
+  status: Status;
+  ipAddress: string | null;
+  userAgent: string | null;
+  geoLocation: string | null;
+  errorReason: string | null;
+  timestamp: Date;
+  createdAt: Date;
 }
 
 export interface Template {

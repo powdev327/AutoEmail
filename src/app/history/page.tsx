@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Email } from '@/types';
+import { Email, EmailEvent } from '@/types';
+import EventTimeline from '@/components/EventTimeline';
 
 const statusColors: Record<string, string> = {
   READY: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
@@ -21,6 +22,9 @@ export default function HistoryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
+  const [events, setEvents] = useState<EmailEvent[]>([]);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(false);
 
   const fetchEmails = useCallback(async () => {
     try {
@@ -39,6 +43,32 @@ export default function HistoryPage() {
   useEffect(() => {
     fetchEmails();
   }, [fetchEmails]);
+
+  // Fetch events for selected email
+  const fetchEvents = async (emailId: string) => {
+    setIsLoadingEvents(true);
+    try {
+      const res = await fetch(`/api/emails/${emailId}/events`);
+      const data = await res.json();
+      if (data.success) {
+        setEvents(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch events:', error);
+    } finally {
+      setIsLoadingEvents(false);
+    }
+  };
+
+  const handleEmailClick = (email: Email) => {
+    if (selectedEmail?.id === email.id) {
+      setSelectedEmail(null);
+      setEvents([]);
+    } else {
+      setSelectedEmail(email);
+      fetchEvents(email.id);
+    }
+  };
 
   // Filter emails based on status and search term
   const filteredEmails = emails.filter((email) => {
@@ -90,7 +120,7 @@ export default function HistoryPage() {
               Email History
             </h1>
             <p className="text-gray-400 mt-2 text-sm md:text-base">
-              View all sent emails and their delivery status
+              View all sent emails and their delivery status. Click a row to see the full event timeline.
             </p>
           </div>
           <Link
@@ -148,149 +178,155 @@ export default function HistoryPage() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-[var(--card-bg)] border-b border-[var(--card-border)]">
-              <tr className="text-left text-xs text-gray-400 uppercase tracking-wider">
-                <th className="px-4 py-4 font-medium">Email</th>
-                <th className="px-4 py-4 font-medium">Name</th>
-                <th className="px-4 py-4 font-medium">Country</th>
-                <th className="px-4 py-4 font-medium">Phone</th>
-                <th className="px-4 py-4 font-medium">Links</th>
-                <th className="px-4 py-4 font-medium">Status</th>
-                <th className="px-4 py-4 font-medium">Sent At</th>
-                <th className="px-4 py-4 font-medium">Tracking</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--card-border)]">
-              {filteredEmails.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-gray-400">
-                    <svg className="w-12 h-12 mx-auto mb-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+      {/* Main Content: Table + Timeline Panel */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Table */}
+        <div className={`${selectedEmail ? 'lg:col-span-2' : 'lg:col-span-3'} bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl overflow-hidden`}>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-[var(--card-bg)] border-b border-[var(--card-border)]">
+                <tr className="text-left text-xs text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-4 font-medium">Email</th>
+                  <th className="px-4 py-4 font-medium">Name</th>
+                  <th className="px-4 py-4 font-medium hidden md:table-cell">Country</th>
+                  <th className="px-4 py-4 font-medium">Status</th>
+                  <th className="px-4 py-4 font-medium hidden lg:table-cell">Sent At</th>
+                  <th className="px-4 py-4 font-medium w-10">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <p>No emails found</p>
-                    {filter !== 'all' && (
-                      <button
-                        onClick={() => setFilter('all')}
-                        className="mt-2 text-blue-400 hover:text-blue-300 text-sm"
-                      >
-                        Clear filter
-                      </button>
-                    )}
-                  </td>
+                  </th>
                 </tr>
-              ) : (
-                filteredEmails.map((email) => (
-                  <tr
-                    key={email.id}
-                    className="hover:bg-[var(--card-bg)]/80 transition-colors"
-                  >
-                    <td className="px-4 py-4">
-                      <span className="text-sm text-white font-medium">{email.email}</span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className="text-sm text-gray-300">{email.name || '-'}</span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className="text-sm text-gray-300">{email.country || '-'}</span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className="text-sm text-gray-300">{email.phone || '-'}</span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-2">
-                        {email.linkedin && (
-                          <a
-                            href={email.linkedin}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-400 hover:text-blue-300"
-                            title="LinkedIn"
-                          >
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                            </svg>
-                          </a>
-                        )}
-                        {email.github && (
-                          <a
-                            href={email.github}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-gray-400 hover:text-gray-300"
-                            title="GitHub"
-                          >
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                            </svg>
-                          </a>
-                        )}
-                        {!email.linkedin && !email.github && (
-                          <span className="text-gray-500">-</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${statusColors[email.status] || statusColors.FAILED}`}>
-                        {email.status}
-                      </span>
-                      {email.lastError && (
-                        <p className="text-xs text-red-400 mt-1 max-w-[150px] truncate" title={email.lastError}>
-                          {email.lastError}
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className="text-sm text-gray-300">
-                        {email.sentAt ? new Date(email.sentAt).toLocaleString() : '-'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4">
-                      {email.openedAt ? (
-                        <div className="space-y-1 text-xs">
-                          {email.ipAddress && (
-                            <div className="flex items-center gap-1.5 text-gray-300">
-                              <svg className="w-3 h-3 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                              </svg>
-                              <span>{email.ipAddress}</span>
-                            </div>
-                          )}
-                          {email.geoLocation && (
-                            <div className="flex items-center gap-1.5 text-gray-300">
-                              <svg className="w-3 h-3 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                              </svg>
-                              <span>{email.geoLocation}</span>
-                            </div>
-                          )}
-                          {email.userAgent && (
-                            <div className="flex items-center gap-1.5 text-gray-400">
-                              <svg className="w-3 h-3 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                              </svg>
-                              <span>{email.userAgent}</span>
-                            </div>
-                          )}
-                          <div className="text-gray-500 mt-1">
-                            Opened: {new Date(email.openedAt).toLocaleString()}
-                            {email.openCount > 1 && ` (${email.openCount}x)`}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-gray-500 text-xs">-</span>
+              </thead>
+              <tbody className="divide-y divide-[var(--card-border)]">
+                {filteredEmails.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-12 text-center text-gray-400">
+                      <svg className="w-12 h-12 mx-auto mb-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      <p>No emails found</p>
+                      {filter !== 'all' && (
+                        <button
+                          onClick={() => setFilter('all')}
+                          className="mt-2 text-blue-400 hover:text-blue-300 text-sm"
+                        >
+                          Clear filter
+                        </button>
                       )}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  filteredEmails.map((email) => (
+                    <tr
+                      key={email.id}
+                      onClick={() => handleEmailClick(email)}
+                      className={`cursor-pointer transition-colors ${
+                        selectedEmail?.id === email.id
+                          ? 'bg-blue-500/10 border-l-2 border-l-blue-500'
+                          : 'hover:bg-[var(--card-bg)]/80'
+                      }`}
+                    >
+                      <td className="px-4 py-4">
+                        <span className="text-sm text-white font-medium">{email.email}</span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="text-sm text-gray-300">{email.name || '-'}</span>
+                      </td>
+                      <td className="px-4 py-4 hidden md:table-cell">
+                        <span className="text-sm text-gray-300">{email.country || '-'}</span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${statusColors[email.status] || statusColors.FAILED}`}>
+                          {email.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 hidden lg:table-cell">
+                        <span className="text-sm text-gray-300">
+                          {email.sentAt ? new Date(email.sentAt).toLocaleString() : '-'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <button
+                          className={`p-1 rounded hover:bg-gray-700 transition-colors ${
+                            selectedEmail?.id === email.id ? 'text-blue-400' : 'text-gray-500'
+                          }`}
+                          title="View timeline"
+                        >
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
+
+        {/* Timeline Panel */}
+        {selectedEmail && (
+          <div className="lg:col-span-1 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-white">Event Timeline</h3>
+                <p className="text-sm text-gray-400">{selectedEmail.email}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedEmail(null);
+                  setEvents([]);
+                }}
+                className="p-1 text-gray-400 hover:text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Email Info Summary */}
+            <div className="bg-gray-800/50 rounded-lg p-3 mb-4 space-y-2 text-sm">
+              {selectedEmail.name && (
+                <div className="flex items-center gap-2 text-gray-300">
+                  <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span>{selectedEmail.name}</span>
+                </div>
+              )}
+              {selectedEmail.country && (
+                <div className="flex items-center gap-2 text-gray-300">
+                  <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{selectedEmail.country}</span>
+                </div>
+              )}
+              {selectedEmail.phone && (
+                <div className="flex items-center gap-2 text-gray-300">
+                  <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                  <span>{selectedEmail.phone}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-gray-300">
+                <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className={statusColors[selectedEmail.status].split(' ')[1]}>
+                  Current: {selectedEmail.status}
+                </span>
+              </div>
+            </div>
+
+            {/* Timeline */}
+            <EventTimeline events={events} isLoading={isLoadingEvents} />
+          </div>
+        )}
       </div>
 
       {/* Footer */}
@@ -300,4 +336,3 @@ export default function HistoryPage() {
     </main>
   );
 }
-

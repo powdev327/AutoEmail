@@ -8,23 +8,41 @@ datasource db {
 }
 
 model Email {
-  id          String   @id @default(cuid())
-  email       String   @unique
+  id          String       @id @default(cuid())
+  email       String       @unique
   name        String?
   country     String?
   phone       String?
   linkedin    String?
   github      String?
-  status      Status   @default(READY)
+  status      Status       @default(READY)
   lastError   String?
   sentAt      DateTime?
   openedAt    DateTime?
-  openCount   Int      @default(0)
+  openCount   Int          @default(0)
   ipAddress   String?
   userAgent   String?
   geoLocation String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  events      EmailEvent[]
+}
+
+model EmailEvent {
+  id          String   @id @default(cuid())
+  emailId     String
+  email       Email    @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  event       String
+  status      Status
+  ipAddress   String?
+  userAgent   String?
+  geoLocation String?
+  errorReason String?
+  rawData     String?  @db.Text
+  timestamp   DateTime
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+
+  @@index([emailId])
 }
 
 model Template {

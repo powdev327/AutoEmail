@@ -57,6 +57,7 @@ export async function POST(
       },
       template
     );
+    const now = new Date();
 
     // Update status based on result
     const updatedEmail = await prisma.email.update({
@@ -64,7 +65,18 @@ export async function POST(
       data: {
         status: result.success ? 'SENT' : 'FAILED',
         lastError: result.error || null,
-        sentAt: result.success ? new Date() : null,
+        sentAt: result.success ? now : null,
+      },
+    });
+
+    // Create event record for history
+    await prisma.emailEvent.create({
+      data: {
+        emailId: id,
+        event: result.success ? 'retry_sent' : 'retry_failed',
+        status: result.success ? 'SENT' : 'FAILED',
+        errorReason: result.error || null,
+        timestamp: now,
       },
     });
 
