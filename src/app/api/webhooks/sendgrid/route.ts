@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { Status } from '@prisma/client';
+import { EventWebhook, EventWebhookHeader } from '@sendgrid/eventwebhook';
 
 interface SendGridEvent {
   event: string;
@@ -14,6 +15,7 @@ interface SendGridEvent {
   reason?: string;
   status?: string;
   response?: string;
+  type?: string;
   // Geo data (when available)
   geo?: {
     city?: string;
@@ -35,6 +37,25 @@ const eventToStatus: Record<string, Status> = {
   spamreport: 'BLOCKED',
   unsubscribe: 'BLOCKED',
 };
+
+/**
+ * Verify SendGrid webhook signature
+ */
+function verifySignature(
+  publicKey: string,
+  payload: string,
+  signature: string,
+  timestamp: string
+): boolean {
+  try {
+    const eventWebhook = new EventWebhook();
+    const ecPublicKey = eventWebhook.convertPublicKeyToECDSA(publicKey);
+    return eventWebhook.verifySignature(ecPublicKey, payload, signature, timestamp);
+  } catch (error) {
+    console.error('Signature verification error:', error);
+    return false;
+  }
+}
 
 /**
  * Parse user agent to get a readable format
@@ -78,7 +99,41 @@ function formatGeoLocation(geo?: { city?: string; country?: string; region?: str
 // POST /api/webhooks/sendgrid - Receive SendGrid webhook events
 export async function POST(request: NextRequest) {
   try {
-    const events: SendGridEvent[] = await request.json();
+    // Get the raw body for signature verification
+    const rawBody = await request.text();
+    
+    // Verify signature if verification key is configured
+    const verificationKey = process.env.SENDGRID_WEBHOOK_VERIFICATION_KEY;
+    
+    if (verificationKey) {
+      const signature = request.headers.get(EventWebhookHeader.SIGNATURE()) || '';
+      const timestamp = request.headers.get(EventWebhookHeader.TIMESTAMP()) || '';
+      
+      if (!signature || !timestamp) {
+        console.error('Missing signature or timestamp headers');
+        return NextResponse.json(
+          { success: false, error: 'Missing security headers' },
+          { status: 401 }
+        );
+      }
+      
+      const isValid = verifySignature(verificationKey, rawBody, signature, timestamp);
+      
+      if (!isValid) {
+        console.error('Invalid webhook signature');
+        return NextResponse.json(
+          { success: false, error: 'Invalid signature' },
+          { status: 401 }
+        );
+      }
+      
+      console.log('Webhook signature verified successfully');
+    } else {
+      console.warn('SENDGRID_WEBHOOK_VERIFICATION_KEY not set - skipping signature verification');
+    }
+
+    // Parse the events
+    const events: SendGridEvent[] = JSON.parse(rawBody);
 
     console.log('Received SendGrid webhook events:', events.length);
 
@@ -101,7 +156,7 @@ export async function POST(request: NextRequest) {
       const userAgent = parseUserAgent(event.useragent);
       const geoLocation = formatGeoLocation(event.geo);
       const errorReason = ['bounce', 'blocked', 'dropped', 'spamreport'].includes(event.event)
-        ? event.reason || event.response || `${event.event}: ${event.status || 'Unknown reason'}`
+        ? event.reason || event.response || event.type || `${event.event}: ${event.status || 'Unknown reason'}`
         : null;
 
       console.log(`Processing event: ${event.event} -> Status: ${newStatus}`);
