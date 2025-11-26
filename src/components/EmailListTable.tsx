@@ -30,8 +30,9 @@ export default function EmailListTable({
   const readyEmails = emails.filter((e) => e.status === 'READY');
   const readyCount = readyEmails.length;
   const sentCount = emails.filter((e) => e.status === 'SENT').length;
-  const failedCount = emails.filter((e) => e.status === 'FAILED').length;
-  const openedCount = emails.filter((e) => e.openedAt).length;
+  const deliveredCount = emails.filter((e) => e.status === 'DELIVERED').length;
+  const openedCount = emails.filter((e) => e.status === 'OPENED').length;
+  const failedCount = emails.filter((e) => ['FAILED', 'BLOCKED', 'BOUNCED', 'DROPPED'].includes(e.status)).length;
 
   // Count selected emails that are READY
   const selectedReadyCount = readyEmails.filter((e) => selectedIds.has(e.id)).length;
@@ -90,15 +91,17 @@ export default function EmailListTable({
               </svg>
               Recipients ({emails.length})
             </h2>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-gray-400">Ready: {readyCount}</span>
-              <span className="text-gray-600">|</span>
-              <span className="text-green-400">Sent: {sentCount}</span>
-              <span className="text-gray-600">|</span>
-              <span className="text-purple-400">Opened: {openedCount}</span>
-              <span className="text-gray-600">|</span>
-              <span className="text-red-400">Failed: {failedCount}</span>
-            </div>
+<div className="flex items-center gap-2 text-xs flex-wrap">
+            <span className="text-gray-400">Ready: {readyCount}</span>
+            <span className="text-gray-600">|</span>
+            <span className="text-yellow-400">Sent: {sentCount}</span>
+            <span className="text-gray-600">|</span>
+            <span className="text-green-400">Delivered: {deliveredCount}</span>
+            <span className="text-gray-600">|</span>
+            <span className="text-purple-400">Opened: {openedCount}</span>
+            <span className="text-gray-600">|</span>
+            <span className="text-red-400">Failed: {failedCount}</span>
+          </div>
           </div>
         </div>
 
@@ -325,7 +328,7 @@ export default function EmailListTable({
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
-                        {email.status === 'FAILED' && (
+                        {['FAILED', 'BLOCKED', 'BOUNCED', 'DROPPED'].includes(email.status) && (
                           <button
                             type="button"
                             onClick={() => onRetry(email.id)}

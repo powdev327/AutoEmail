@@ -40,6 +40,11 @@ enum Status {
   READY
   SENDING
   SENT
+  DELIVERED
+  OPENED
+  BLOCKED
+  BOUNCED
+  DROPPED
   FAILED
 }
 
