@@ -256,7 +256,7 @@ export default function Home() {
   };
 
   // Open send confirmation for all
-  const openSendAllConfirm = () => {
+  const openSendAllConfirm = async () => {
     if (!template) {
       toast.error('Please save a template first');
       return;
@@ -266,7 +266,7 @@ export default function Home() {
   };
 
   // Open send confirmation for selected
-  const openSendSelectedConfirm = (ids: string[]) => {
+  const openSendSelectedConfirm = async (ids: string[]) => {
     if (!template) {
       toast.error('Please save a template first');
       return;
