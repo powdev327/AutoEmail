@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { Status } from '@prisma/client';
 
 interface SendGridEvent {
   event: string;
@@ -21,8 +22,8 @@ interface SendGridEvent {
   };
 }
 
-// Map SendGrid events to our status
-const eventToStatus: Record<string, string> = {
+// Map SendGrid events to our status enum
+const eventToStatus: Record<string, Status> = {
   delivered: 'DELIVERED',
   open: 'OPENED',
   bounce: 'BOUNCED',
@@ -95,40 +96,57 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // Build update data based on event type
-      const updateData: Record<string, unknown> = {
-        status: newStatus,
-      };
-
-      // For delivery failure events, store the reason
-      if (['bounce', 'blocked', 'dropped', 'spamreport'].includes(event.event)) {
-        const errorReason = event.reason || event.response || `${event.event}: ${event.status || 'Unknown reason'}`;
-        updateData.lastError = errorReason;
-        console.log(`Delivery failed: ${errorReason}`);
-      }
-
-      // For open events, capture tracking data
-      if (event.event === 'open') {
-        updateData.openedAt = new Date(event.timestamp * 1000);
-        updateData.openCount = { increment: 1 };
-        updateData.ipAddress = event.ip || null;
-        updateData.userAgent = parseUserAgent(event.useragent);
-        updateData.geoLocation = formatGeoLocation(event.geo);
-        console.log(`Email opened - IP: ${event.ip}, Location: ${formatGeoLocation(event.geo)}`);
-      }
-
-      // For delivered events, clear any previous error
-      if (event.event === 'delivered') {
-        updateData.lastError = null;
-        console.log('Email delivered successfully');
-      }
+      console.log(`Updating email ${event.emailId} to status: ${newStatus}`);
 
       try {
-        await prisma.email.update({
-          where: { id: event.emailId },
-          data: updateData,
-        });
-        console.log(`Updated email ${event.emailId} to status: ${newStatus}`);
+        // Handle open events
+        if (event.event === 'open') {
+          await prisma.email.update({
+            where: { id: event.emailId },
+            data: {
+              status: newStatus,
+              openedAt: new Date(event.timestamp * 1000),
+              openCount: { increment: 1 },
+              ipAddress: event.ip || null,
+              userAgent: parseUserAgent(event.useragent),
+              geoLocation: formatGeoLocation(event.geo),
+            },
+          });
+          console.log(`Email opened - IP: ${event.ip}, Status updated to: ${newStatus}`);
+        }
+        // Handle delivery failure events
+        else if (['bounce', 'blocked', 'dropped', 'spamreport'].includes(event.event)) {
+          const errorReason = event.reason || event.response || `${event.event}: ${event.status || 'Unknown reason'}`;
+          await prisma.email.update({
+            where: { id: event.emailId },
+            data: {
+              status: newStatus,
+              lastError: errorReason,
+            },
+          });
+          console.log(`Delivery failed: ${errorReason}, Status updated to: ${newStatus}`);
+        }
+        // Handle delivered events
+        else if (event.event === 'delivered') {
+          await prisma.email.update({
+            where: { id: event.emailId },
+            data: {
+              status: newStatus,
+              lastError: null,
+            },
+          });
+          console.log(`Email delivered successfully, Status updated to: ${newStatus}`);
+        }
+        // Handle other events
+        else {
+          await prisma.email.update({
+            where: { id: event.emailId },
+            data: {
+              status: newStatus,
+            },
+          });
+          console.log(`Status updated to: ${newStatus}`);
+        }
       } catch (dbError) {
         console.error(`Failed to update email ${event.emailId}:`, dbError);
       }
