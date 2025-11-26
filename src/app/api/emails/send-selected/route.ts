@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { sendTemplatedEmail, delay } from '@/lib/sendgrid';
+import { sendTemplatedEmail, delay } from '@/lib/email';
 
 // POST /api/emails/send-selected - Send emails to selected recipients
 export async function POST(request: NextRequest) {

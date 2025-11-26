@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { sendTemplatedEmail, delay } from '@/lib/sendgrid';
+import { sendTemplatedEmail, delay } from '@/lib/email';
 
 // POST /api/emails/send-all - Send emails to all ready recipients
 export async function POST() {

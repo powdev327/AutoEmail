@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { sendTemplatedEmail } from '@/lib/sendgrid';
+import { sendTemplatedEmail } from '@/lib/email';
 
 // POST /api/emails/[id]/retry - Retry sending a failed email
 export async function POST(
