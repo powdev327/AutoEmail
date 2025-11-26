@@ -196,6 +196,7 @@ export default function EmailListTable({
                 <th className="px-4 py-3 font-medium hidden lg:table-cell">Country</th>
                 <th className="px-4 py-3 font-medium hidden xl:table-cell">Links</th>
                 <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium hidden lg:table-cell">Tracking</th>
                 <th className="px-4 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
@@ -284,6 +285,42 @@ export default function EmailListTable({
                         <span className="block text-xs text-red-400 mt-1 max-w-[150px] truncate" title={email.lastError}>
                           {email.lastError}
                         </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 hidden lg:table-cell">
+                      {email.openedAt ? (
+                        <div className="space-y-1 text-xs">
+                          {email.ipAddress && (
+                            <div className="flex items-center gap-1.5 text-gray-300">
+                              <svg className="w-3 h-3 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                              </svg>
+                              <span title="IP Address">{email.ipAddress}</span>
+                            </div>
+                          )}
+                          {email.geoLocation && (
+                            <div className="flex items-center gap-1.5 text-gray-300">
+                              <svg className="w-3 h-3 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                              <span title="Location">{email.geoLocation}</span>
+                            </div>
+                          )}
+                          {email.userAgent && (
+                            <div className="flex items-center gap-1.5 text-gray-400">
+                              <svg className="w-3 h-3 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                              </svg>
+                              <span title="Device">{email.userAgent}</span>
+                            </div>
+                          )}
+                          {!email.ipAddress && !email.geoLocation && !email.userAgent && (
+                            <span className="text-gray-500">No data yet</span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-500 text-xs">-</span>
                       )}
                     </td>
                     <td className="px-4 py-3">

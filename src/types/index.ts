@@ -13,6 +13,9 @@ export interface Email {
   sentAt: Date | null;
   openedAt: Date | null;
   openCount: number;
+  ipAddress: string | null;
+  userAgent: string | null;
+  geoLocation: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
