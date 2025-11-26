@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { Email, Template, EmailFormData, TemplateFormData } from '@/types';
 import EmailInputForm from '@/components/EmailInputForm';
@@ -310,17 +311,30 @@ export default function Home() {
     <main className="min-h-screen p-4 md:p-6 lg:p-8">
       {/* Header */}
       <header className="mb-6 md:mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
-          <span className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-            <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
+              <span className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </span>
+              Email Sender
+            </h1>
+            <p className="text-gray-400 mt-2 text-sm md:text-base">
+              Send personalized emails to multiple recipients with tracking
+            </p>
+          </div>
+          <Link
+            href="/history"
+            className="flex items-center gap-2 px-4 py-2 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg text-gray-300 hover:text-white hover:border-gray-500 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
-          </span>
-          Email Sender
-        </h1>
-        <p className="text-gray-400 mt-2 text-sm md:text-base">
-          Send personalized emails to multiple recipients with tracking
-        </p>
+            View History
+          </Link>
+        </div>
       </header>
 
       {/* Main content */}
