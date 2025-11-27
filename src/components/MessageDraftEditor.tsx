@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { TemplateFormData } from '@/types';
+import { useState, useEffect, useCallback } from 'react';
+import { TemplateFormData, Template } from '@/types';
 
 interface MessageDraftEditorProps {
   initialData?: TemplateFormData | null;
@@ -26,6 +26,29 @@ export default function MessageDraftEditor({
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [hasChanges, setHasChanges] = useState(false);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+
+  // Fetch template history
+  const fetchTemplates = useCallback(async () => {
+    setIsLoadingTemplates(true);
+    try {
+      const res = await fetch('/api/templates');
+      const data = await res.json();
+      if (data.success) {
+        setTemplates(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch templates:', error);
+    } finally {
+      setIsLoadingTemplates(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTemplates();
+  }, [fetchTemplates]);
 
   useEffect(() => {
     if (initialData) {
@@ -48,10 +71,24 @@ export default function MessageDraftEditor({
     if (!subject.trim() || !body.trim()) return;
     await onSave({ subject, body });
     setHasChanges(false);
+    // Refresh templates after saving
+    fetchTemplates();
   };
 
   const insertPlaceholder = (placeholder: string) => {
     setBody((prev) => prev + placeholder);
+  };
+
+  const selectTemplate = (template: Template) => {
+    setSubject(template.subject);
+    setBody(template.body);
+    setShowHistory(false);
+  };
+
+  // Truncate text for display
+  const truncate = (text: string, maxLength: number) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
   };
 
   return (
@@ -63,13 +100,92 @@ export default function MessageDraftEditor({
           </svg>
           Message Template
         </h2>
-        {hasChanges && (
-          <span className="text-xs text-amber-400 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-            Unsaved changes
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {hasChanges && (
+            <span className="text-xs text-amber-400 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              Unsaved
+            </span>
+          )}
+          {/* Template History Button */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowHistory(!showHistory)}
+              className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
+              title="Template History"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
+
+            {/* History Dropdown */}
+            {showHistory && (
+              <div className="absolute right-0 top-full mt-2 w-72 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg shadow-xl z-50 max-h-80 overflow-hidden">
+                <div className="p-3 border-b border-[var(--card-border)]">
+                  <h3 className="text-sm font-medium text-white flex items-center gap-2">
+                    <svg className="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    Template History
+                  </h3>
+                </div>
+                
+                <div className="max-h-60 overflow-y-auto">
+                  {isLoadingTemplates ? (
+                    <div className="p-4 text-center text-gray-400">
+                      <svg className="animate-spin h-5 w-5 mx-auto mb-2" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Loading...
+                    </div>
+                  ) : templates.length === 0 ? (
+                    <div className="p-4 text-center text-gray-500 text-sm">
+                      No saved templates yet
+                    </div>
+                  ) : (
+                    templates.map((template) => (
+                      <button
+                        key={template.id}
+                        type="button"
+                        onClick={() => selectTemplate(template)}
+                        className={`w-full p-3 text-left hover:bg-gray-700/50 transition-colors border-b border-[var(--card-border)] last:border-b-0 ${
+                          template.isActive ? 'bg-purple-500/10' : ''
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium text-white truncate flex-1">
+                            {truncate(template.subject, 30)}
+                          </span>
+                          {template.isActive && (
+                            <span className="text-xs text-purple-400 ml-2">Active</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-400 line-clamp-2">
+                          {truncate(template.body.replace(/\n/g, ' '), 60)}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(template.createdAt).toLocaleDateString()}
+                        </p>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* Click outside to close dropdown */}
+      {showHistory && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setShowHistory(false)}
+        />
+      )}
 
       {/* Placeholders */}
       <div className="mb-4">
@@ -147,4 +263,3 @@ export default function MessageDraftEditor({
     </div>
   );
 }
-

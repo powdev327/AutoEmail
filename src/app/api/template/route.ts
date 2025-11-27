@@ -18,7 +18,7 @@ export async function GET() {
   }
 }
 
-// PUT /api/template - Update or create template
+// PUT /api/template - Save template (creates new one and sets as active)
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
@@ -39,23 +39,34 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Find existing active template
+    // Check if this exact template already exists (to avoid duplicates)
     const existingTemplate = await prisma.template.findFirst({
-      where: { isActive: true },
+      where: { 
+        subject,
+        body: templateBody,
+      },
     });
 
     let template;
 
     if (existingTemplate) {
-      // Update existing template
+      // Just set this one as active
+      await prisma.template.updateMany({
+        where: { isActive: true },
+        data: { isActive: false },
+      });
+      
       template = await prisma.template.update({
         where: { id: existingTemplate.id },
-        data: {
-          subject,
-          body: templateBody,
-        },
+        data: { isActive: true },
       });
     } else {
+      // Deactivate all existing templates
+      await prisma.template.updateMany({
+        where: { isActive: true },
+        data: { isActive: false },
+      });
+
       // Create new template
       template = await prisma.template.create({
         data: {
