@@ -133,7 +133,7 @@ export default function Home() {
     setIsSavingTemplate(true);
     try {
       const res = await fetch('/api/template', {
-        method: 'PUT',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });

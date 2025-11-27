@@ -18,8 +18,8 @@ export async function GET() {
   }
 }
 
-// PUT /api/template - Save template (creates new one and sets as active)
-export async function PUT(request: NextRequest) {
+// Save template helper function
+async function saveTemplate(request: NextRequest) {
   let body;
   
   try {
@@ -97,5 +97,15 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// PUT /api/template - Save template
+export async function PUT(request: NextRequest) {
+  return saveTemplate(request);
+}
+
+// POST /api/template - Save template (alternative method)
+export async function POST(request: NextRequest) {
+  return saveTemplate(request);
 }
 
