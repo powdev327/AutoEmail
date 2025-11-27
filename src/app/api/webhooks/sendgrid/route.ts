@@ -27,13 +27,13 @@ interface SendGridEvent {
 // Map SendGrid events to our status enum
 const eventToStatus: Record<string, Status> = {
   processed: 'SENT',
-  delivered: 'SENT', // Treat delivered as sent (no separate DELIVERED status)
+  delivered: 'DELIVERED', // Use DELIVERED status when SendGrid confirms delivery
   open: 'OPENED',
   click: 'OPENED', // Click implies opened
   bounce: 'FAILED', // Treat bounce as failed
   blocked: 'BLOCKED',
   dropped: 'DROPPED',
-  deferred: 'SENT',
+  deferred: 'SENT', // Deferred means temporarily delayed, still SENT
   spamreport: 'BLOCKED',
   unsubscribe: 'BLOCKED',
 };

@@ -1,40 +1,11 @@
-import nodemailer from 'nodemailer';
 import sgMail from '@sendgrid/mail';
 import { Email, Template } from '@/types';
 
-// Email provider type
-type EmailProvider = 'smtp' | 'sendgrid';
-
-// Determine which provider to use based on env vars
-function getProvider(): EmailProvider {
-  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-    return 'smtp';
-  }
-  if (process.env.SENDGRID_API_KEY) {
-    return 'sendgrid';
-  }
-  return 'smtp'; // Default to SMTP
-}
-
-// Initialize SendGrid if configured
+// Initialize SendGrid
 if (process.env.SENDGRID_API_KEY) {
   sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-}
-
-// Create SMTP transporter for Gmail/Outlook/etc.
-function createSMTPTransporter() {
-  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-  const port = parseInt(process.env.SMTP_PORT || '587');
-  
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465, // true for 465, false for other ports
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
+} else {
+  console.warn('SENDGRID_API_KEY not configured - email sending will fail');
 }
 
 /**
@@ -73,94 +44,8 @@ function getTrackingPixel(emailId: string): string {
 }
 
 /**
- * Send email via SMTP (Gmail, Outlook, etc.)
- */
-async function sendViaSMTP(
-  to: string,
-  subject: string,
-  htmlBody: string,
-  emailId?: string
-): Promise<{ success: boolean; error?: string }> {
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    return { success: false, error: 'SMTP credentials not configured. Set SMTP_USER and SMTP_PASS.' };
-  }
-
-  try {
-    const transporter = createSMTPTransporter();
-    
-    // Add tracking pixel if emailId provided
-    let finalHtml = htmlBody;
-    if (emailId) {
-      const trackingPixel = getTrackingPixel(emailId);
-      finalHtml = `${htmlBody}${trackingPixel}`;
-    }
-    
-    await transporter.sendMail({
-      from: {
-        name: process.env.FROM_NAME || 'Email Sender',
-        address: process.env.FROM_EMAIL || process.env.SMTP_USER,
-      },
-      to,
-      subject,
-      html: finalHtml,
-      text: htmlBody.replace(/<[^>]*>/g, ''), // Strip HTML for plain text (no pixel)
-    });
-
-    console.log(`Email sent via SMTP to ${to} (with tracking pixel)`);
-    return { success: true };
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown SMTP error';
-    console.error('SMTP Error:', errorMessage);
-    return { success: false, error: errorMessage };
-  }
-}
-
-/**
  * Send email via SendGrid
- */
-async function sendViaSendGrid(
-  to: string,
-  subject: string,
-  htmlBody: string,
-  emailId?: string
-): Promise<{ success: boolean; error?: string }> {
-  if (!process.env.SENDGRID_API_KEY) {
-    return { success: false, error: 'SendGrid API key not configured' };
-  }
-
-  if (!process.env.FROM_EMAIL) {
-    return { success: false, error: 'FROM_EMAIL not configured' };
-  }
-
-  try {
-    await sgMail.send({
-      to,
-      from: {
-        email: process.env.FROM_EMAIL,
-        name: process.env.FROM_NAME || 'Email Sender',
-      },
-      subject,
-      html: htmlBody,
-      text: htmlBody.replace(/<[^>]*>/g, ''),
-      trackingSettings: {
-        openTracking: {
-          enable: true,
-        },
-      },
-      customArgs: emailId ? { emailId } : undefined,
-    });
-
-    console.log(`Email sent via SendGrid to ${to}`);
-    return { success: true };
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown SendGrid error';
-    console.error('SendGrid Error:', errorMessage);
-    return { success: false, error: errorMessage };
-  }
-}
-
-/**
- * Send a single email using the configured provider
+ * Includes custom tracking pixel for manual tracking (in addition to SendGrid's built-in tracking)
  */
 export async function sendEmail(
   to: string,
@@ -168,14 +53,51 @@ export async function sendEmail(
   htmlBody: string,
   emailId?: string
 ): Promise<{ success: boolean; error?: string }> {
-  const provider = getProvider();
-  
-  console.log(`Sending email via ${provider.toUpperCase()} to ${to}`);
-  
-  if (provider === 'smtp') {
-    return sendViaSMTP(to, subject, htmlBody, emailId);
-  } else {
-    return sendViaSendGrid(to, subject, htmlBody, emailId);
+  if (!process.env.SENDGRID_API_KEY) {
+    return { success: false, error: 'SendGrid API key not configured. Set SENDGRID_API_KEY.' };
+  }
+
+  if (!process.env.FROM_EMAIL) {
+    return { success: false, error: 'FROM_EMAIL not configured' };
+  }
+
+  try {
+    // Add our custom tracking pixel if emailId provided
+    // This works alongside SendGrid's built-in open tracking
+    let finalHtml = htmlBody;
+    if (emailId) {
+      const trackingPixel = getTrackingPixel(emailId);
+      finalHtml = `${htmlBody}${trackingPixel}`;
+    }
+
+    await sgMail.send({
+      to,
+      from: {
+        email: process.env.FROM_EMAIL,
+        name: process.env.FROM_NAME || 'Email Sender',
+      },
+      subject,
+      html: finalHtml,
+      text: htmlBody.replace(/<[^>]*>/g, ''), // Plain text version (no pixel)
+      // SendGrid's built-in tracking (will also send webhooks)
+      trackingSettings: {
+        openTracking: {
+          enable: true,
+        },
+        clickTracking: {
+          enable: false, // We only track opens
+        },
+      },
+      // Pass emailId in custom args so webhook can identify the email
+      customArgs: emailId ? { emailId } : undefined,
+    });
+
+    console.log(`Email sent via SendGrid to ${to} (with tracking pixel and webhook)`);
+    return { success: true };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown SendGrid error';
+    console.error('SendGrid Error:', errorMessage);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -228,19 +150,10 @@ export async function sendTemplatedEmail(
 /**
  * Get current email provider info
  */
-export function getProviderInfo(): { provider: EmailProvider; configured: boolean } {
-  const provider = getProvider();
-  
-  if (provider === 'smtp') {
-    return {
-      provider: 'smtp',
-      configured: !!(process.env.SMTP_USER && process.env.SMTP_PASS),
-    };
-  }
-  
+export function getProviderInfo(): { provider: 'sendgrid'; configured: boolean } {
   return {
     provider: 'sendgrid',
-    configured: !!process.env.SENDGRID_API_KEY,
+    configured: !!(process.env.SENDGRID_API_KEY && process.env.FROM_EMAIL),
   };
 }
 

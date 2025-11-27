@@ -25,6 +25,7 @@ A full-stack email sender application built with Next.js, PostgreSQL, and SendGr
 - Node.js 18+ 
 - PostgreSQL database (free options: [Neon](https://neon.tech), [Supabase](https://supabase.com))
 - SendGrid account with API key (100 free emails/day)
+- Verified sender email in SendGrid (required for sending)
 
 ## Setup
 
