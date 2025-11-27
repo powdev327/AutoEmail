@@ -57,10 +57,17 @@ export default function Home() {
     }
   }, []);
 
-  // Initial load
+  // Initial load and auto-refresh
   useEffect(() => {
     fetchEmails();
     fetchTemplate();
+    
+    // Auto-refresh emails every 5 seconds for real-time status updates
+    const interval = setInterval(() => {
+      fetchEmails();
+    }, 5000);
+    
+    return () => clearInterval(interval);
   }, [fetchEmails, fetchTemplate]);
 
   // Add email
