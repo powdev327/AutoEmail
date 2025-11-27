@@ -196,6 +196,18 @@ export function processEmailBody(body: string): string {
 }
 
 /**
+ * Strip any tracking pixels or images from HTML (safety measure)
+ */
+function stripTrackingPixels(html: string): string {
+  return html
+    // Remove tracking pixel images
+    .replace(/<img[^>]*\/api\/track[^>]*>/gi, '')
+    // Remove any 1x1 images (common tracking pattern)
+    .replace(/<img[^>]*width=["']?1["']?[^>]*height=["']?1["']?[^>]*>/gi, '')
+    .replace(/<img[^>]*height=["']?1["']?[^>]*width=["']?1["']?[^>]*>/gi, '');
+}
+
+/**
  * Send email to a single recipient with template
  */
 export async function sendTemplatedEmail(
@@ -207,10 +219,13 @@ export async function sendTemplatedEmail(
 
   const result = await sendEmail(email.email, personalizedSubject, personalizedBody, email.id);
   
+  // Ensure we NEVER save tracking pixels to the database
+  const cleanBody = stripTrackingPixels(personalizedBody);
+  
   return {
     ...result,
     sentSubject: personalizedSubject,
-    sentBody: personalizedBody,
+    sentBody: cleanBody,
   };
 }
 
