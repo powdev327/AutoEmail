@@ -107,12 +107,31 @@ export async function GET(
 ) {
   const { emailId } = params;
   
+  // Debug mode: add ?debug=true to see tracking info as JSON
+  const debug = request.nextUrl.searchParams.get('debug') === 'true';
+  
   // Get tracking data from request
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() 
     || request.headers.get('x-real-ip') 
     || 'Unknown';
   const userAgent = request.headers.get('user-agent') || 'Unknown';
   const timestamp = new Date();
+  
+  // If debug mode, return info as JSON instead of pixel
+  if (debug) {
+    const email = await prisma.email.findUnique({
+      where: { id: emailId },
+      select: { id: true, email: true, status: true, openedAt: true, openCount: true }
+    });
+    return NextResponse.json({
+      emailId,
+      emailFound: !!email,
+      emailData: email,
+      detectedIp: ip,
+      detectedUserAgent: userAgent,
+      timestamp: timestamp.toISOString(),
+    });
+  }
   
   console.log(`📧 Email opened: ${emailId}`);
   console.log(`   IP: ${ip}`);
