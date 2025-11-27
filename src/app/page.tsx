@@ -8,6 +8,7 @@ import MessageDraftEditor from '@/components/MessageDraftEditor';
 import EmailListTable from '@/components/EmailListTable';
 import ConfirmModal from '@/components/ConfirmModal';
 import EmailDetailModal from '@/components/EmailDetailModal';
+import MessageModal from '@/components/MessageModal';
 
 type SendMode = 'all' | 'selected' | null;
 
@@ -27,6 +28,7 @@ export default function Home() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [lastEventTime, setLastEventTime] = useState<string | null>(null);
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
+  const [messageEmail, setMessageEmail] = useState<Email | null>(null);
 
   // Fetch emails
   const fetchEmails = useCallback(async () => {
@@ -380,6 +382,7 @@ export default function Home() {
               onSendAll={openSendAllConfirm}
               onSendSelected={openSendSelectedConfirm}
               onEmailClick={(email) => setSelectedEmail(email)}
+              onMessageClick={(email) => setMessageEmail(email)}
               isDeleting={isDeletingEmail}
               isRetrying={isRetryingEmail}
               isSending={isSending}
@@ -408,6 +411,13 @@ export default function Home() {
         email={selectedEmail}
         isOpen={!!selectedEmail}
         onClose={() => setSelectedEmail(null)}
+      />
+
+      {/* Message Modal */}
+      <MessageModal
+        email={messageEmail}
+        isOpen={!!messageEmail}
+        onClose={() => setMessageEmail(null)}
       />
     </main>
   );
