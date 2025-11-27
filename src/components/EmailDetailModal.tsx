@@ -164,13 +164,11 @@ export default function EmailDetailModal({ email, isOpen, onClose }: EmailDetail
                   <p className="text-xs text-gray-500 mb-1">Subject</p>
                   <p className="text-sm text-white font-medium">{email.sentSubject}</p>
                 </div>
-                {/* Body - Display as plain text to prevent any tracking pixel loading */}
+                {/* Body - Display plain text directly from database */}
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Body</p>
                   <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">
-                    {(email.sentBody || '')
-                      .replace(/<br\s*\/?>/gi, '\n')
-                      .replace(/<[^>]*>/g, '')}
+                    {email.sentBody || ''}
                   </pre>
                 </div>
               </div>

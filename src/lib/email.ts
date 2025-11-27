@@ -196,36 +196,32 @@ export function processEmailBody(body: string): string {
 }
 
 /**
- * Strip any tracking pixels or images from HTML (safety measure)
- */
-function stripTrackingPixels(html: string): string {
-  return html
-    // Remove tracking pixel images
-    .replace(/<img[^>]*\/api\/track[^>]*>/gi, '')
-    // Remove any 1x1 images (common tracking pattern)
-    .replace(/<img[^>]*width=["']?1["']?[^>]*height=["']?1["']?[^>]*>/gi, '')
-    .replace(/<img[^>]*height=["']?1["']?[^>]*width=["']?1["']?[^>]*>/gi, '');
-}
-
-/**
  * Send email to a single recipient with template
+ * 
+ * Flow:
+ * 1. Replace placeholders in plain text
+ * 2. Save PLAIN TEXT to database (sentBody)
+ * 3. Convert to HTML + add tracking pixel ONLY for sending
  */
 export async function sendTemplatedEmail(
   email: Email,
   template: Template
 ): Promise<{ success: boolean; error?: string; sentSubject?: string; sentBody?: string }> {
+  // Step 1: Replace placeholders - keep as PLAIN TEXT
   const personalizedSubject = replacePlaceholders(template.subject, email);
-  const personalizedBody = processEmailBody(replacePlaceholders(template.body, email));
+  const personalizedBodyPlainText = replacePlaceholders(template.body, email);
 
-  const result = await sendEmail(email.email, personalizedSubject, personalizedBody, email.id);
+  // Step 2: Convert to HTML ONLY for sending (not for storage)
+  const htmlBodyForEmail = processEmailBody(personalizedBodyPlainText);
+
+  // Step 3: Send email with HTML body (tracking pixel added inside sendEmail)
+  const result = await sendEmail(email.email, personalizedSubject, htmlBodyForEmail, email.id);
   
-  // Ensure we NEVER save tracking pixels to the database
-  const cleanBody = stripTrackingPixels(personalizedBody);
-  
+  // Step 4: Return PLAIN TEXT for storage in database (no HTML, no tracking pixel)
   return {
     ...result,
     sentSubject: personalizedSubject,
-    sentBody: cleanBody,
+    sentBody: personalizedBodyPlainText,  // Store PLAIN TEXT only
   };
 }
 

@@ -67,14 +67,12 @@ export default function MessageModal({ email, isOpen, onClose }: MessageModalPro
               {/* Divider */}
               <div className="border-t border-[var(--card-border)] my-4" />
 
-              {/* Body - Display as plain text to prevent any tracking pixel loading */}
+              {/* Body - Display plain text directly from database */}
               <div>
                 <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">Message Body</p>
                 <div className="bg-[var(--input-bg)] border border-[var(--card-border)] rounded-lg p-4">
                   <pre className="text-sm text-gray-200 whitespace-pre-wrap font-sans leading-relaxed">
-                    {(email.sentBody || '')
-                      .replace(/<br\s*\/?>/gi, '\n')
-                      .replace(/<[^>]*>/g, '')}
+                    {email.sentBody || ''}
                   </pre>
                 </div>
               </div>
