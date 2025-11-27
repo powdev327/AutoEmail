@@ -19,6 +19,10 @@ const statusConfig: Record<Status, { label: string; className: string; icon?: st
   },
   SENT: {
     label: 'Sent',
+    className: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+  },
+  DELIVERED: {
+    label: 'Delivered',
     className: 'bg-green-500/20 text-green-400 border-green-500/30',
   },
   OPENED: {
@@ -48,6 +52,12 @@ export default function StatusBadge({ status, openedAt, openCount = 0 }: StatusB
       case 'SENDING':
         return <span className="w-1.5 h-1.5 rounded-full bg-blue-400 mr-1.5 animate-pulse" />;
       case 'SENT':
+        return (
+          <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+          </svg>
+        );
+      case 'DELIVERED':
         return (
           <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

@@ -8,7 +8,8 @@ import EventTimeline from '@/components/EventTimeline';
 const statusColors: Record<string, string> = {
   READY: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
   SENDING: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  SENT: 'bg-green-500/20 text-green-400 border-green-500/30',
+  SENT: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+  DELIVERED: 'bg-green-500/20 text-green-400 border-green-500/30',
   OPENED: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
   BLOCKED: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
   DROPPED: 'bg-red-500/20 text-red-400 border-red-500/30',
@@ -109,6 +110,7 @@ export default function HistoryPage() {
   const counts = {
     all: emails.length,
     SENT: emails.filter(e => e.status === 'SENT').length,
+    DELIVERED: emails.filter(e => e.status === 'DELIVERED').length,
     OPENED: emails.filter(e => e.status === 'OPENED').length,
     BLOCKED: emails.filter(e => e.status === 'BLOCKED').length,
     FAILED: emails.filter(e => e.status === 'FAILED').length,
@@ -159,10 +161,11 @@ export default function HistoryPage() {
       </header>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
         {[
           { key: 'all', label: 'Total', color: 'bg-gray-500' },
-          { key: 'SENT', label: 'Sent', color: 'bg-green-500' },
+          { key: 'SENT', label: 'Sent', color: 'bg-yellow-500' },
+          { key: 'DELIVERED', label: 'Delivered', color: 'bg-green-500' },
           { key: 'OPENED', label: 'Opened', color: 'bg-purple-500' },
           { key: 'BLOCKED', label: 'Blocked', color: 'bg-orange-500' },
           { key: 'FAILED', label: 'Failed', color: 'bg-red-500' },

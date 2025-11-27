@@ -30,6 +30,7 @@ export default function EmailListTable({
   const readyEmails = emails.filter((e) => e.status === 'READY');
   const readyCount = readyEmails.length;
   const sentCount = emails.filter((e) => e.status === 'SENT').length;
+  const deliveredCount = emails.filter((e) => e.status === 'DELIVERED').length;
   const openedCount = emails.filter((e) => e.status === 'OPENED').length;
   const failedCount = emails.filter((e) => ['FAILED', 'BLOCKED', 'DROPPED'].includes(e.status)).length;
 

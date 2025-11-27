@@ -1,9 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
+// Auto-mark SENT emails as DELIVERED after 5 minutes
+async function autoMarkDelivered() {
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+  
+  try {
+    // Find SENT emails older than 5 minutes
+    const sentEmails = await prisma.email.findMany({
+      where: {
+        status: 'SENT',
+        sentAt: {
+          lt: fiveMinutesAgo,
+        },
+      },
+    });
+
+    // Update each to DELIVERED and create event
+    for (const email of sentEmails) {
+      await prisma.email.update({
+        where: { id: email.id },
+        data: { status: 'DELIVERED' },
+      });
+
+      // Create delivery event
+      await prisma.emailEvent.create({
+        data: {
+          emailId: email.id,
+          event: 'delivered',
+          status: 'DELIVERED',
+          timestamp: new Date(),
+        },
+      });
+
+      console.log(`Auto-marked email ${email.id} as DELIVERED`);
+    }
+  } catch (error) {
+    console.error('Error auto-marking delivered:', error);
+  }
+}
+
 // GET /api/emails - Get all emails
 export async function GET() {
   try {
+    // Auto-mark old SENT emails as DELIVERED (background, non-blocking)
+    autoMarkDelivered();
+    
     const emails = await prisma.email.findMany({
       orderBy: { createdAt: 'desc' },
     });

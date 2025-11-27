@@ -1,4 +1,4 @@
-export type Status = 'READY' | 'SENDING' | 'SENT' | 'OPENED' | 'BLOCKED' | 'DROPPED' | 'FAILED';
+export type Status = 'READY' | 'SENDING' | 'SENT' | 'DELIVERED' | 'OPENED' | 'BLOCKED' | 'DROPPED' | 'FAILED';
 
 export interface Email {
   id: string;

@@ -58,6 +58,7 @@ enum Status {
   READY
   SENDING
   SENT
+  DELIVERED
   OPENED
   BLOCKED
   DROPPED

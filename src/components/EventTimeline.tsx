@@ -26,7 +26,8 @@ const eventConfig: Record<string, { label: string; icon: string; color: string }
 const statusColors: Record<Status, string> = {
   READY: 'bg-gray-500',
   SENDING: 'bg-blue-500',
-  SENT: 'bg-green-500',
+  SENT: 'bg-yellow-500',
+  DELIVERED: 'bg-green-500',
   OPENED: 'bg-purple-500',
   BLOCKED: 'bg-orange-500',
   DROPPED: 'bg-red-500',
