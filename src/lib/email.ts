@@ -12,6 +12,8 @@ if (process.env.SENDGRID_API_KEY) {
  * Replace placeholders in text with actual values
  * Supports: {{email}}, {{name}}, {{country}}, {{phone}}, {{linkedin}}, {{github}}
  */
+//
+
 export function replacePlaceholders(text: string, email: Email): string {
   const placeholders: Record<string, string> = {
     '{{email}}': email.email,
