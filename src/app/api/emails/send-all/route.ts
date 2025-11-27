@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { sendTemplatedEmail, delay } from '@/lib/email';
+import { Email } from '@/types';
 
 // POST /api/emails/send-all - Send emails to all ready recipients
 export async function POST() {
@@ -32,16 +33,28 @@ export async function POST() {
     const results: { id: string; success: boolean; error?: string }[] = [];
 
     // Process each email with rate limiting
-    for (const email of emails) {
+    for (let i = 0; i < emails.length; i++) {
+      const email = emails[i];
+      const now = new Date();
+      
       // Update status to SENDING
       await prisma.email.update({
         where: { id: email.id },
         data: { status: 'SENDING', lastError: null },
       });
 
-      // Send the email
-      const result = await sendTemplatedEmail(email, template);
-      const now = new Date();
+      let result: { success: boolean; error?: string; sentSubject?: string; sentBody?: string };
+      
+      try {
+        // Send the email (cast to Email type for compatibility)
+        result = await sendTemplatedEmail(email as Email, template);
+      } catch (err) {
+        // Handle unexpected errors
+        result = { 
+          success: false, 
+          error: err instanceof Error ? err.message : 'Unknown error occurred' 
+        };
+      }
 
       // Update status based on result
       await prisma.email.update({
@@ -52,7 +65,7 @@ export async function POST() {
           sentAt: result.success ? now : null,
           sentSubject: result.success ? result.sentSubject : null,
           sentBody: result.success ? result.sentBody : null,
-        },
+        } as Parameters<typeof prisma.email.update>[0]['data'],
       });
 
       // Create event record for history
@@ -72,8 +85,8 @@ export async function POST() {
         error: result.error,
       });
 
-      // Rate limiting: wait 1 second between sends
-      if (emails.indexOf(email) < emails.length - 1) {
+      // Rate limiting: wait 1 second between sends (except for last email)
+      if (i < emails.length - 1) {
         await delay(1000);
       }
     }

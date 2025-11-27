@@ -48,16 +48,26 @@ export async function POST(
       data: { status: 'SENDING', lastError: null },
     });
 
-    // Send the email
-    const result = await sendTemplatedEmail(
-      {
-        ...email,
-        status: 'SENDING',
-        lastError: null,
-      },
-      template
-    );
     const now = new Date();
+    let result: { success: boolean; error?: string; sentSubject?: string; sentBody?: string };
+
+    try {
+      // Send the email
+      result = await sendTemplatedEmail(
+        {
+          ...email,
+          status: 'SENDING',
+          lastError: null,
+        },
+        template
+      );
+    } catch (err) {
+      // Handle unexpected errors
+      result = { 
+        success: false, 
+        error: err instanceof Error ? err.message : 'Unknown error occurred' 
+      };
+    }
 
     // Update status based on result
     const updatedEmail = await prisma.email.update({
