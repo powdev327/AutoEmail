@@ -67,18 +67,15 @@ export default function MessageModal({ email, isOpen, onClose }: MessageModalPro
               {/* Divider */}
               <div className="border-t border-[var(--card-border)] my-4" />
 
-              {/* Body */}
+              {/* Body - Display as plain text to prevent any tracking pixel loading */}
               <div>
                 <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">Message Body</p>
                 <div className="bg-[var(--input-bg)] border border-[var(--card-border)] rounded-lg p-4">
-                  <div 
-                    className="text-sm text-gray-200 prose prose-invert prose-sm max-w-none leading-relaxed"
-                    dangerouslySetInnerHTML={{ 
-                      __html: (email.sentBody || '')
-                        // Strip tracking pixel to prevent false opens when viewing
-                        .replace(/<img[^>]*\/api\/track\/[^>]*>/gi, '')
-                    }}
-                  />
+                  <pre className="text-sm text-gray-200 whitespace-pre-wrap font-sans leading-relaxed">
+                    {(email.sentBody || '')
+                      .replace(/<br\s*\/?>/gi, '\n')
+                      .replace(/<[^>]*>/g, '')}
+                  </pre>
                 </div>
               </div>
             </>

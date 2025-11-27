@@ -164,17 +164,14 @@ export default function EmailDetailModal({ email, isOpen, onClose }: EmailDetail
                   <p className="text-xs text-gray-500 mb-1">Subject</p>
                   <p className="text-sm text-white font-medium">{email.sentSubject}</p>
                 </div>
-                {/* Body */}
+                {/* Body - Display as plain text to prevent any tracking pixel loading */}
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Body</p>
-                  <div 
-                    className="text-sm text-gray-300 prose prose-invert prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ 
-                      __html: (email.sentBody || '')
-                        // Strip tracking pixel to prevent false opens when viewing
-                        .replace(/<img[^>]*\/api\/track\/[^>]*>/gi, '')
-                    }}
-                  />
+                  <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">
+                    {(email.sentBody || '')
+                      .replace(/<br\s*\/?>/gi, '\n')
+                      .replace(/<[^>]*>/g, '')}
+                  </pre>
                 </div>
               </div>
             </div>
