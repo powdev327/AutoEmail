@@ -27,11 +27,12 @@ export function usePusher({ onEmailOpened, enabled = true }: UsePusherOptions) {
 
   const connect = useCallback(() => {
     // Check if Pusher is configured
-    const key = process.env.NEXT_PUBL_PUSHER_KEY;
-    const cluster = process.env.NEXT_PUBL_PUSHER_CLUSTER;
+    // Note: Next.js only exposes env vars prefixed with NEXT_PUBLIC_ to the client
+    const key = process.env.NEXT_PUBLIC_PUSHER_KEY;
+    const cluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
 
     if (!key || !cluster) {
-      console.log('Pusher not configured (missing NEXT_PUBL_PUSHER_KEY or NEXT_PUBL_PUSHER_CLUSTER)');
+      console.log('Pusher not configured (missing NEXT_PUBLIC_PUSHER_KEY or NEXT_PUBLIC_PUSHER_CLUSTER)');
       return;
     }
 
