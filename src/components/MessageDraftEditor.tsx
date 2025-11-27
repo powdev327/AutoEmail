@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { TemplateFormData, Template } from '@/types';
 
 interface MessageDraftEditorProps {
@@ -29,6 +29,11 @@ export default function MessageDraftEditor({
   const [templates, setTemplates] = useState<Template[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+  const [lastFocusedField, setLastFocusedField] = useState<'subject' | 'body'>('body');
+  
+  // Refs for cursor position
+  const subjectRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
 
   // Fetch template history
   const fetchTemplates = useCallback(async () => {
@@ -76,7 +81,37 @@ export default function MessageDraftEditor({
   };
 
   const insertPlaceholder = (placeholder: string) => {
-    setBody((prev) => prev + placeholder);
+    if (lastFocusedField === 'subject') {
+      const input = subjectRef.current;
+      if (input) {
+        const start = input.selectionStart || 0;
+        const end = input.selectionEnd || 0;
+        const newValue = subject.slice(0, start) + placeholder + subject.slice(end);
+        setSubject(newValue);
+        // Restore cursor position after the inserted placeholder
+        setTimeout(() => {
+          input.focus();
+          input.setSelectionRange(start + placeholder.length, start + placeholder.length);
+        }, 0);
+      } else {
+        setSubject((prev) => prev + placeholder);
+      }
+    } else {
+      const textarea = bodyRef.current;
+      if (textarea) {
+        const start = textarea.selectionStart || 0;
+        const end = textarea.selectionEnd || 0;
+        const newValue = body.slice(0, start) + placeholder + body.slice(end);
+        setBody(newValue);
+        // Restore cursor position after the inserted placeholder
+        setTimeout(() => {
+          textarea.focus();
+          textarea.setSelectionRange(start + placeholder.length, start + placeholder.length);
+        }, 0);
+      } else {
+        setBody((prev) => prev + placeholder);
+      }
+    }
   };
 
   const selectTemplate = (template: Template) => {
@@ -189,7 +224,9 @@ export default function MessageDraftEditor({
 
       {/* Placeholders */}
       <div className="mb-4">
-        <p className="text-xs text-gray-400 mb-2">Available placeholders (click to insert):</p>
+        <p className="text-xs text-gray-400 mb-2">
+          Available placeholders (click to insert into {lastFocusedField === 'subject' ? 'Subject' : 'Body'}):
+        </p>
         <div className="flex flex-wrap gap-2">
           {placeholders.map((p) => (
             <button
@@ -211,10 +248,12 @@ export default function MessageDraftEditor({
           Subject <span className="text-red-400">*</span>
         </label>
         <input
+          ref={subjectRef}
           type="text"
           id="subject"
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
+          onFocus={() => setLastFocusedField('subject')}
           placeholder="Enter email subject..."
           className="w-full px-3 py-2 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-colors"
           disabled={isSaving}
@@ -227,9 +266,11 @@ export default function MessageDraftEditor({
           Message Body <span className="text-red-400">*</span>
         </label>
         <textarea
+          ref={bodyRef}
           id="body"
           value={body}
           onChange={(e) => setBody(e.target.value)}
+          onFocus={() => setLastFocusedField('body')}
           placeholder={`Hello {{name}},\n\nThank you for your interest...\n\nBest regards`}
           className="flex-1 w-full px-3 py-2 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-colors resize-none font-mono text-sm min-h-[200px]"
           disabled={isSaving}
