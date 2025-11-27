@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { Email, Template, EmailFormData, TemplateFormData } from '@/types';
 import EmailInputForm from '@/components/EmailInputForm';
@@ -26,9 +26,11 @@ export default function Home() {
   const [showSendConfirm, setShowSendConfirm] = useState(false);
   const [sendMode, setSendMode] = useState<SendMode>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [lastEventTime, setLastEventTime] = useState<string | null>(null);
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [messageEmail, setMessageEmail] = useState<Email | null>(null);
+  
+  // Use ref for lastEventTime to avoid re-creating interval
+  const lastEventTimeRef = useRef<string | null>(null);
 
   // Fetch emails
   const fetchEmails = useCallback(async () => {
@@ -61,22 +63,35 @@ export default function Home() {
     }
   }, []);
 
-  // Initial load and smart auto-refresh
+  // Initial load
   useEffect(() => {
     fetchEmails();
     fetchTemplate();
-    
-    // Smart polling - check for new events every 3 seconds
-    // Only refresh emails when a new tracking event occurs
+  }, [fetchEmails, fetchTemplate]);
+
+  // Smart polling - separate effect to avoid recreating interval
+  useEffect(() => {
+    // Poll for new events every 3 seconds
     const interval = setInterval(async () => {
       try {
         const res = await fetch('/api/events/latest');
         const data = await res.json();
         
         if (data.success && data.data.lastEventTime) {
-          if (data.data.lastEventTime !== lastEventTime) {
-            setLastEventTime(data.data.lastEventTime);
-            fetchEmails();
+          // Check if there's a new event
+          if (data.data.lastEventTime !== lastEventTimeRef.current) {
+            const isFirstLoad = lastEventTimeRef.current === null;
+            lastEventTimeRef.current = data.data.lastEventTime;
+            
+            // Only show toast and refresh if it's not the initial load
+            if (!isFirstLoad) {
+              console.log('📧 New tracking event detected, refreshing...');
+              fetchEmails();
+              toast.success('Email status updated!', { 
+                icon: '📧',
+                duration: 2000 
+              });
+            }
           }
         }
       } catch (error) {
@@ -85,7 +100,7 @@ export default function Home() {
     }, 3000);
     
     return () => clearInterval(interval);
-  }, [fetchEmails, fetchTemplate, lastEventTime]);
+  }, [fetchEmails]);
 
   // Add email
   const handleAddEmail = async (formData: EmailFormData) => {
