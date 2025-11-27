@@ -19,10 +19,6 @@ const statusConfig: Record<Status, { label: string; className: string; icon?: st
   },
   SENT: {
     label: 'Sent',
-    className: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  },
-  DELIVERED: {
-    label: 'Delivered',
     className: 'bg-green-500/20 text-green-400 border-green-500/30',
   },
   OPENED: {
@@ -32,10 +28,6 @@ const statusConfig: Record<Status, { label: string; className: string; icon?: st
   BLOCKED: {
     label: 'Blocked',
     className: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-  },
-  BOUNCED: {
-    label: 'Bounced',
-    className: 'bg-red-500/20 text-red-400 border-red-500/30',
   },
   DROPPED: {
     label: 'Dropped',
@@ -58,12 +50,6 @@ export default function StatusBadge({ status, openedAt, openCount = 0 }: StatusB
       case 'SENT':
         return (
           <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-          </svg>
-        );
-      case 'DELIVERED':
-        return (
-          <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         );
@@ -80,7 +66,6 @@ export default function StatusBadge({ status, openedAt, openCount = 0 }: StatusB
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
           </svg>
         );
-      case 'BOUNCED':
       case 'DROPPED':
       case 'FAILED':
         return (

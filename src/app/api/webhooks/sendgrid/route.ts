@@ -27,10 +27,10 @@ interface SendGridEvent {
 // Map SendGrid events to our status enum
 const eventToStatus: Record<string, Status> = {
   processed: 'SENT',
-  delivered: 'DELIVERED',
+  delivered: 'SENT', // Treat delivered as sent (no separate DELIVERED status)
   open: 'OPENED',
   click: 'OPENED', // Click implies opened
-  bounce: 'BOUNCED',
+  bounce: 'FAILED', // Treat bounce as failed
   blocked: 'BLOCKED',
   dropped: 'DROPPED',
   deferred: 'SENT',

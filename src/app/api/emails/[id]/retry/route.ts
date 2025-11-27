@@ -22,7 +22,7 @@ export async function POST(
       );
     }
 
-    const retryableStatuses = ['FAILED', 'BLOCKED', 'BOUNCED', 'DROPPED'];
+    const retryableStatuses = ['FAILED', 'BLOCKED', 'DROPPED'];
     if (!retryableStatuses.includes(email.status)) {
       return NextResponse.json(
         { success: false, error: 'Can only retry failed, blocked, bounced, or dropped emails' },
