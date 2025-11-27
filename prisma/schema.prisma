@@ -18,6 +18,8 @@ model Email {
   status      Status       @default(READY)
   lastError   String?
   sentAt      DateTime?
+  sentSubject String?
+  sentBody    String?      @db.Text
   openedAt    DateTime?
   openCount   Int          @default(0)
   ipAddress   String?

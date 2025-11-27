@@ -11,6 +11,8 @@ export interface Email {
   status: Status;
   lastError: string | null;
   sentAt: Date | null;
+  sentSubject: string | null;
+  sentBody: string | null;
   openedAt: Date | null;
   openCount: number;
   ipAddress: string | null;

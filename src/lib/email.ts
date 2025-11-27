@@ -201,11 +201,17 @@ export function processEmailBody(body: string): string {
 export async function sendTemplatedEmail(
   email: Email,
   template: Template
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; sentSubject?: string; sentBody?: string }> {
   const personalizedSubject = replacePlaceholders(template.subject, email);
   const personalizedBody = processEmailBody(replacePlaceholders(template.body, email));
 
-  return sendEmail(email.email, personalizedSubject, personalizedBody, email.id);
+  const result = await sendEmail(email.email, personalizedSubject, personalizedBody, email.id);
+  
+  return {
+    ...result,
+    sentSubject: personalizedSubject,
+    sentBody: personalizedBody,
+  };
 }
 
 /**

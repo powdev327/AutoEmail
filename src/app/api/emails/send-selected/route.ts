@@ -63,6 +63,8 @@ export async function POST(request: NextRequest) {
           status: result.success ? 'SENT' : 'FAILED',
           lastError: result.error || null,
           sentAt: result.success ? now : null,
+          sentSubject: result.success ? result.sentSubject : null,
+          sentBody: result.success ? result.sentBody : null,
         },
       });
 
