@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { broadcastEmailOpened } from '@/lib/pusher';
 
 // 1x1 transparent GIF pixel (base64)
 const TRANSPARENT_PIXEL = Buffer.from(
@@ -180,6 +181,17 @@ export async function GET(
           geoLocation: geoLocation,
           timestamp: timestamp,
         },
+      });
+
+      // Broadcast real-time update via Pusher
+      await broadcastEmailOpened({
+        emailId,
+        status: 'OPENED',
+        openedAt: timestamp.toISOString(),
+        openCount: (email.openCount || 0) + 1,
+        ipAddress: ip !== 'Unknown' ? ip : undefined,
+        userAgent: parsedUA,
+        geoLocation: geoLocation || undefined,
       });
 
       console.log(`   ✅ Tracked successfully`);
