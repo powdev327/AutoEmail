@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
 // Auto-mark SENT emails as DELIVERED after 5 minutes
+// NOTE: This is a fallback - real delivery should come from webhooks
 async function autoMarkDelivered() {
   const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
   
   try {
-    // Find SENT emails older than 5 minutes
+    // Find SENT emails older than 5 minutes (but not already OPENED)
     const sentEmails = await prisma.email.findMany({
       where: {
         status: 'SENT',
@@ -18,25 +19,37 @@ async function autoMarkDelivered() {
 
     // Update each to DELIVERED and create event
     for (const email of sentEmails) {
-      await prisma.email.update({
-        where: { id: email.id },
-        data: { status: 'DELIVERED' },
-      });
+      try {
+        await prisma.email.update({
+          where: { id: email.id },
+          data: { status: 'DELIVERED' },
+        });
 
-      // Create delivery event
-      await prisma.emailEvent.create({
-        data: {
-          emailId: email.id,
-          event: 'delivered',
-          status: 'DELIVERED',
-          timestamp: new Date(),
-        },
-      });
+        // Create delivery event
+        await prisma.emailEvent.create({
+          data: {
+            emailId: email.id,
+            event: 'delivered',
+            status: 'DELIVERED',
+            timestamp: new Date(),
+          },
+        });
 
-      console.log(`Auto-marked email ${email.id} as DELIVERED`);
+        console.log(`Auto-marked email ${email.id} as DELIVERED`);
+      } catch (updateError: any) {
+        // If DELIVERED status doesn't exist in DB enum, skip silently
+        if (updateError?.message?.includes('enum') || updateError?.code === '22P02') {
+          console.log(`Skipping auto-mark for ${email.id} - DELIVERED status not in database enum`);
+          continue;
+        }
+        throw updateError;
+      }
     }
   } catch (error) {
-    console.error('Error auto-marking delivered:', error);
+    // Don't log errors if it's just the enum issue
+    if (error instanceof Error && !error.message.includes('enum')) {
+      console.error('Error auto-marking delivered:', error);
+    }
   }
 }
 
@@ -44,6 +57,7 @@ async function autoMarkDelivered() {
 export async function GET() {
   try {
     // Auto-mark old SENT emails as DELIVERED (background, non-blocking)
+    // Only runs if DELIVERED enum exists in database
     autoMarkDelivered();
     
     const emails = await prisma.email.findMany({

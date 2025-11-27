@@ -24,10 +24,19 @@ interface UsePusherOptions {
 export function usePusher({ onEmailOpened, enabled = true }: UsePusherOptions) {
   const pusherRef = useRef<Pusher | null>(null);
   const channelRef = useRef<ReturnType<Pusher['subscribe']> | null>(null);
+  const onEmailOpenedRef = useRef(onEmailOpened);
 
-  const connect = useCallback(() => {
+  // Keep callback ref updated without causing re-renders
+  useEffect(() => {
+    onEmailOpenedRef.current = onEmailOpened;
+  }, [onEmailOpened]);
+
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     // Check if Pusher is configured
-    // Note: Next.js only exposes env vars prefixed with NEXT_PUBLIC_ to the client
     const key = process.env.NEXT_PUBLIC_PUSHER_KEY;
     const cluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
 
@@ -37,7 +46,9 @@ export function usePusher({ onEmailOpened, enabled = true }: UsePusherOptions) {
     }
 
     // Don't reconnect if already connected
-    if (pusherRef.current) return;
+    if (pusherRef.current) {
+      return;
+    }
 
     try {
       // Initialize Pusher with proper WebSocket configuration
@@ -48,7 +59,7 @@ export function usePusher({ onEmailOpened, enabled = true }: UsePusherOptions) {
         disabledTransports: [],
       });
 
-      // Wait for connection before subscribing
+      // Connection event handlers
       pusherRef.current.connection.bind('connected', () => {
         console.log('📡 Pusher WebSocket connected');
       });
@@ -69,42 +80,31 @@ export function usePusher({ onEmailOpened, enabled = true }: UsePusherOptions) {
         console.log('📡 Pusher subscribed to channel:', PUSHER_CHANNEL);
       });
 
-      // Bind to email-opened event
-      if (onEmailOpened) {
-        channelRef.current.bind(PUSHER_EVENT_EMAIL_OPENED, onEmailOpened);
-      }
+      // Bind to email-opened event using ref to avoid re-binding
+      channelRef.current.bind(PUSHER_EVENT_EMAIL_OPENED, (data: EmailUpdateEvent) => {
+        if (onEmailOpenedRef.current) {
+          onEmailOpenedRef.current(data);
+        }
+      });
 
       console.log('📡 Pusher initialized');
     } catch (error) {
       console.error('Pusher initialization error:', error);
     }
-  }, [onEmailOpened]);
 
-  const disconnect = useCallback(() => {
-    if (channelRef.current) {
-      channelRef.current.unbind_all();
-      channelRef.current.unsubscribe();
-      channelRef.current = null;
-    }
-
-    if (pusherRef.current) {
-      pusherRef.current.disconnect();
-      pusherRef.current = null;
-    }
-
-    console.log('📡 Pusher disconnected');
-  }, []);
-
-  useEffect(() => {
-    if (enabled) {
-      connect();
-    }
-
+    // Cleanup on unmount
     return () => {
-      disconnect();
-    };
-  }, [enabled, connect, disconnect]);
+      if (channelRef.current) {
+        channelRef.current.unbind_all();
+        channelRef.current.unsubscribe();
+        channelRef.current = null;
+      }
 
-  return { connect, disconnect };
+      if (pusherRef.current) {
+        pusherRef.current.disconnect();
+        pusherRef.current = null;
+      }
+    };
+  }, [enabled]); // Only depend on enabled, not callbacks
 }
 
