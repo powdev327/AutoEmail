@@ -25,6 +25,7 @@ export default function Home() {
   const [showSendConfirm, setShowSendConfirm] = useState(false);
   const [sendMode, setSendMode] = useState<SendMode>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [lastEventTime, setLastEventTime] = useState<string | null>(null);
 
   // Fetch emails
   const fetchEmails = useCallback(async () => {
@@ -57,18 +58,31 @@ export default function Home() {
     }
   }, []);
 
-  // Initial load and auto-refresh
+  // Initial load and smart auto-refresh
   useEffect(() => {
     fetchEmails();
     fetchTemplate();
     
-    // Auto-refresh emails every 5 seconds for real-time status updates
-    const interval = setInterval(() => {
-      fetchEmails();
-    }, 5000);
+    // Smart polling - check for new events every 3 seconds
+    // Only refresh emails when a new tracking event occurs
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/events/latest');
+        const data = await res.json();
+        
+        if (data.success && data.data.lastEventTime) {
+          if (data.data.lastEventTime !== lastEventTime) {
+            setLastEventTime(data.data.lastEventTime);
+            fetchEmails();
+          }
+        }
+      } catch (error) {
+        console.error('Failed to check for new events:', error);
+      }
+    }, 3000);
     
     return () => clearInterval(interval);
-  }, [fetchEmails, fetchTemplate]);
+  }, [fetchEmails, fetchTemplate, lastEventTime]);
 
   // Add email
   const handleAddEmail = async (formData: EmailFormData) => {

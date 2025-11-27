@@ -23,6 +23,7 @@ export default function HistoryPage() {
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [events, setEvents] = useState<EmailEvent[]>([]);
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
+  const [lastEventTime, setLastEventTime] = useState<string | null>(null);
 
   const fetchEmails = useCallback(async () => {
     try {
@@ -38,20 +39,8 @@ export default function HistoryPage() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchEmails();
-    
-    // Auto-refresh email list every 5 seconds for real-time status updates
-    // Note: Event timeline is NOT auto-refreshed to avoid UI jumping
-    const interval = setInterval(() => {
-      fetchEmails();
-    }, 5000);
-    
-    return () => clearInterval(interval);
-  }, [fetchEmails]);
-
   // Fetch events for selected email
-  const fetchEvents = async (emailId: string) => {
+  const fetchEvents = useCallback(async (emailId: string) => {
     setIsLoadingEvents(true);
     try {
       const res = await fetch(`/api/emails/${emailId}/events`);
@@ -64,7 +53,37 @@ export default function HistoryPage() {
     } finally {
       setIsLoadingEvents(false);
     }
-  };
+  }, []);
+
+  // Smart polling - only refresh when new events occur
+  useEffect(() => {
+    fetchEmails();
+    
+    // Check for new events every 3 seconds
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/events/latest');
+        const data = await res.json();
+        
+        if (data.success && data.data.lastEventTime) {
+          // If there's a new event, refresh the data
+          if (data.data.lastEventTime !== lastEventTime) {
+            setLastEventTime(data.data.lastEventTime);
+            fetchEmails();
+            
+            // If the event is for the currently selected email, refresh timeline
+            if (selectedEmail && data.data.lastEmailId === selectedEmail.id) {
+              fetchEvents(selectedEmail.id);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to check for new events:', error);
+      }
+    }, 3000);
+    
+    return () => clearInterval(interval);
+  }, [fetchEmails, fetchEvents, lastEventTime, selectedEmail]);
 
   const handleEmailClick = (email: Email) => {
     if (selectedEmail?.id === email.id) {
