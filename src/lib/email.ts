@@ -60,12 +60,26 @@ export function replacePlaceholders(text: string, email: Email): string {
 }
 
 /**
+ * Generate tracking pixel HTML
+ */
+function getTrackingPixel(emailId: string): string {
+  // Use configured APP_URL or default to Vercel URL
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://auto-email-plum.vercel.app';
+  
+  // Add timestamp to prevent caching
+  const trackingUrl = `${baseUrl}/api/track/${emailId}?t=${Date.now()}`;
+  
+  return `<img src="${trackingUrl}" width="1" height="1" style="display:none;width:1px;height:1px;border:0;" alt="" />`;
+}
+
+/**
  * Send email via SMTP (Gmail, Outlook, etc.)
  */
 async function sendViaSMTP(
   to: string,
   subject: string,
-  htmlBody: string
+  htmlBody: string,
+  emailId?: string
 ): Promise<{ success: boolean; error?: string }> {
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
     return { success: false, error: 'SMTP credentials not configured. Set SMTP_USER and SMTP_PASS.' };
@@ -74,6 +88,13 @@ async function sendViaSMTP(
   try {
     const transporter = createSMTPTransporter();
     
+    // Add tracking pixel if emailId provided
+    let finalHtml = htmlBody;
+    if (emailId) {
+      const trackingPixel = getTrackingPixel(emailId);
+      finalHtml = `${htmlBody}${trackingPixel}`;
+    }
+    
     await transporter.sendMail({
       from: {
         name: process.env.FROM_NAME || 'Email Sender',
@@ -81,11 +102,11 @@ async function sendViaSMTP(
       },
       to,
       subject,
-      html: htmlBody,
-      text: htmlBody.replace(/<[^>]*>/g, ''), // Strip HTML for plain text
+      html: finalHtml,
+      text: htmlBody.replace(/<[^>]*>/g, ''), // Strip HTML for plain text (no pixel)
     });
 
-    console.log(`Email sent via SMTP to ${to}`);
+    console.log(`Email sent via SMTP to ${to} (with tracking pixel)`);
     return { success: true };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown SMTP error';
@@ -152,7 +173,7 @@ export async function sendEmail(
   console.log(`Sending email via ${provider.toUpperCase()} to ${to}`);
   
   if (provider === 'smtp') {
-    return sendViaSMTP(to, subject, htmlBody);
+    return sendViaSMTP(to, subject, htmlBody, emailId);
   } else {
     return sendViaSendGrid(to, subject, htmlBody, emailId);
   }
