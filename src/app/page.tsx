@@ -137,7 +137,19 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
-      const data = await res.json();
+      
+      // Check if response has content
+      const text = await res.text();
+      if (!text) {
+        throw new Error('Server returned empty response. Please try again.');
+      }
+      
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(`Invalid server response: ${text.substring(0, 100)}`);
+      }
 
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Failed to save template');

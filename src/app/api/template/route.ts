@@ -20,8 +20,19 @@ export async function GET() {
 
 // PUT /api/template - Save template (creates new one and sets as active)
 export async function PUT(request: NextRequest) {
+  let body;
+  
   try {
-    const body = await request.json();
+    body = await request.json();
+  } catch (parseError) {
+    console.error('Error parsing request body:', parseError);
+    return NextResponse.json(
+      { success: false, error: 'Invalid JSON in request body' },
+      { status: 400 }
+    );
+  }
+  
+  try {
     const { subject, body: templateBody } = body;
 
     // Validate input
@@ -80,8 +91,9 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ success: true, data: template });
   } catch (error) {
     console.error('Error saving template:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { success: false, error: 'Failed to save template' },
+      { success: false, error: `Failed to save template: ${errorMessage}` },
       { status: 500 }
     );
   }
