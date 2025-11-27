@@ -169,7 +169,11 @@ export default function EmailDetailModal({ email, isOpen, onClose }: EmailDetail
                   <p className="text-xs text-gray-500 mb-1">Body</p>
                   <div 
                     className="text-sm text-gray-300 prose prose-invert prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ __html: email.sentBody || '' }}
+                    dangerouslySetInnerHTML={{ 
+                      __html: (email.sentBody || '')
+                        // Strip tracking pixel to prevent false opens when viewing
+                        .replace(/<img[^>]*\/api\/track\/[^>]*>/gi, '')
+                    }}
                   />
                 </div>
               </div>

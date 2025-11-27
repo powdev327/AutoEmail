@@ -73,7 +73,11 @@ export default function MessageModal({ email, isOpen, onClose }: MessageModalPro
                 <div className="bg-[var(--input-bg)] border border-[var(--card-border)] rounded-lg p-4">
                   <div 
                     className="text-sm text-gray-200 prose prose-invert prose-sm max-w-none leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: email.sentBody || '' }}
+                    dangerouslySetInnerHTML={{ 
+                      __html: (email.sentBody || '')
+                        // Strip tracking pixel to prevent false opens when viewing
+                        .replace(/<img[^>]*\/api\/track\/[^>]*>/gi, '')
+                    }}
                   />
                 </div>
               </div>
