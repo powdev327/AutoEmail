@@ -40,22 +40,43 @@ export function usePusher({ onEmailOpened, enabled = true }: UsePusherOptions) {
     if (pusherRef.current) return;
 
     try {
-      // Initialize Pusher
+      // Initialize Pusher with proper WebSocket configuration
       pusherRef.current = new Pusher(key, {
         cluster,
+        forceTLS: true,
+        enabledTransports: ['ws', 'wss'],
+        disabledTransports: [],
+      });
+
+      // Wait for connection before subscribing
+      pusherRef.current.connection.bind('connected', () => {
+        console.log('📡 Pusher WebSocket connected');
+      });
+
+      pusherRef.current.connection.bind('error', (err: any) => {
+        console.error('Pusher connection error:', err);
+      });
+
+      pusherRef.current.connection.bind('disconnected', () => {
+        console.log('📡 Pusher disconnected');
       });
 
       // Subscribe to channel
       channelRef.current = pusherRef.current.subscribe(PUSHER_CHANNEL);
+
+      // Wait for subscription to be successful
+      channelRef.current.bind('pusher:subscription_succeeded', () => {
+        console.log('📡 Pusher subscribed to channel:', PUSHER_CHANNEL);
+      });
 
       // Bind to email-opened event
       if (onEmailOpened) {
         channelRef.current.bind(PUSHER_EVENT_EMAIL_OPENED, onEmailOpened);
       }
 
-      console.log('📡 Pusher connected');
+      console.log('📡 Pusher initialized');
     } catch (error) {
-      console.error('Pusher connection error:', error);
+      console.error('Pusher initialization error:', error);
     }
   }, [onEmailOpened]);
 

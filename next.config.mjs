@@ -4,7 +4,7 @@ const securityHeaders = [
     value: [
       "default-src 'self'",
       "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
-      "connect-src 'self' https://*.pusher.com wss://*.pusher.com https://*.pusherapp.com https://ipapi.co",
+      "connect-src 'self' https://*.pusher.com wss://*.pusher.com ws://*.pusher.com https://*.pusherapp.com https://ipapi.co",
       "img-src 'self' data: blob:",
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self' data:",
