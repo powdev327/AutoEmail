@@ -137,27 +137,25 @@ export async function GET(
   console.log(`   IP: ${ip}`);
   console.log(`   User-Agent: ${userAgent}`);
 
-  // Process tracking in background (don't delay pixel response)
-  (async () => {
-    try {
-      // Get geo data
-      const geo = await getGeoFromIP(ip);
-      const geoLocation = formatGeoLocation(geo);
-      const parsedUA = parseUserAgent(userAgent);
-      
-      console.log(`   Location: ${geoLocation || 'Unknown'}`);
-      console.log(`   Device: ${parsedUA}`);
+  // Process tracking BEFORE returning response (required for serverless)
+  try {
+    // Get geo data (with timeout to prevent slow responses)
+    const geoPromise = getGeoFromIP(ip);
+    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000));
+    const geo = await Promise.race([geoPromise, timeoutPromise]);
+    
+    const geoLocation = formatGeoLocation(geo);
+    const parsedUA = parseUserAgent(userAgent);
+    
+    console.log(`   Location: ${geoLocation || 'Unknown'}`);
+    console.log(`   Device: ${parsedUA}`);
 
-      // Check if email exists
-      const email = await prisma.email.findUnique({
-        where: { id: emailId },
-      });
+    // Check if email exists
+    const email = await prisma.email.findUnique({
+      where: { id: emailId },
+    });
 
-      if (!email) {
-        console.log(`   ⚠️ Email not found: ${emailId}`);
-        return;
-      }
-
+    if (email) {
       // Update email record
       await prisma.email.update({
         where: { id: emailId },
@@ -185,12 +183,15 @@ export async function GET(
       });
 
       console.log(`   ✅ Tracked successfully`);
-    } catch (error) {
-      console.error('Tracking error:', error);
+    } else {
+      console.log(`   ⚠️ Email not found: ${emailId}`);
     }
-  })();
+  } catch (error) {
+    console.error('Tracking error:', error);
+    // Don't fail the request - still return the pixel
+  }
 
-  // Return transparent pixel immediately
+  // Return transparent pixel after tracking is complete
   return new NextResponse(TRANSPARENT_PIXEL, {
     status: 200,
     headers: {
