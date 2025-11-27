@@ -41,17 +41,14 @@ export default function HistoryPage() {
   useEffect(() => {
     fetchEmails();
     
-    // Auto-refresh every 5 seconds for real-time open tracking updates
+    // Auto-refresh email list every 5 seconds for real-time status updates
+    // Note: Event timeline is NOT auto-refreshed to avoid UI jumping
     const interval = setInterval(() => {
       fetchEmails();
-      // Also refresh events if an email is selected
-      if (selectedEmail) {
-        fetchEvents(selectedEmail.id);
-      }
     }, 5000);
     
     return () => clearInterval(interval);
-  }, [fetchEmails, selectedEmail]);
+  }, [fetchEmails]);
 
   // Fetch events for selected email
   const fetchEvents = async (emailId: string) => {
