@@ -7,8 +7,9 @@ A full-stack email sender application built with Next.js, PostgreSQL, and SendGr
 - **Add Recipients**: Add emails with optional metadata (name, country, phone, LinkedIn, GitHub)
 - **Message Templates**: Create personalized email templates with placeholder support
 - **Bulk Sending**: Send emails to all ready recipients with a single click
-- **Status Tracking**: Real-time status updates (Ready → Sending → Sent/Failed)
-- **Open Tracking**: See when recipients open your emails (requires webhook setup)
+- **Status Tracking**: Track email status via SendGrid webhooks (Sent → Delivered → Opened)
+- **Full Email Tracking**: Track opens, clicks, bounces, blocks, and delivery status (all via SendGrid)
+- **Manual Refresh**: Use the refresh button to see latest email status updates
 - **Retry Failed**: Retry failed emails individually
 - **Rate Limiting**: Built-in 1-second delay between sends to respect API limits
 
@@ -16,7 +17,7 @@ A full-stack email sender application built with Next.js, PostgreSQL, and SendGr
 
 - **Frontend & Backend**: Next.js 14 (App Router)
 - **Database**: PostgreSQL with Prisma ORM
-- **Email Service**: SendGrid
+- **Email Service**: SendGrid (with built-in tracking)
 - **Styling**: TailwindCSS
 - **Notifications**: react-hot-toast
 
@@ -45,13 +46,19 @@ Copy the example environment file and fill in your values:
 cp env.example.txt .env.local
 ```
 
-Edit `.env.local`:
+Edit `.env.local` (or copy from `env.example.txt`):
 
 ```env
+# Database
 DATABASE_URL="postgresql://user:pass@host:5432/dbname?sslmode=require"
+
+# SendGrid (Required)
 SENDGRID_API_KEY="SG.your-api-key"
 FROM_EMAIL="your-verified@email.com"
 FROM_NAME="Your Name"
+
+# SendGrid Webhook Verification (Optional but Recommended)
+SENDGRID_WEBHOOK_VERIFICATION_KEY="your-webhook-verification-key"
 ```
 
 ### 3. Setup Database
@@ -107,29 +114,49 @@ Best regards
 | POST | `/api/emails/send-all` | Send to all ready recipients |
 | POST | `/api/emails/[id]/retry` | Retry failed email |
 | GET | `/api/template` | Get current template |
-| PUT | `/api/template` | Save/update template |
-| POST | `/api/webhooks/sendgrid` | SendGrid webhook for open tracking |
+| POST | `/api/template` | Save/update template |
+| POST | `/api/webhooks/sendgrid` | SendGrid webhook for all email events (open, click, delivered, bounce, etc.) |
 
-## Email Open Tracking Setup
+## SendGrid Webhook Setup (Required for Tracking)
 
-To enable open tracking, you need to configure a SendGrid Event Webhook:
+This app uses **SendGrid's built-in tracking** - no custom tracking pixels needed. All tracking is handled via SendGrid webhooks.
 
 ### 1. Deploy Your App First
 
 The webhook URL must be publicly accessible. Deploy to Vercel first.
 
-### 2. Configure SendGrid Webhook
+### 2. Configure SendGrid Event Webhook
 
 1. Go to [SendGrid Settings > Mail Settings > Event Webhooks](https://app.sendgrid.com/settings/mail_settings)
 2. Click **Create new webhook**
 3. Enter your webhook URL: `https://your-domain.vercel.app/api/webhooks/sendgrid`
-4. Select **Open** event (and optionally: Click, Bounce, Spam Report)
+4. **Select ALL events** (or at minimum):
+   - ✅ **Processed** (email accepted by SendGrid)
+   - ✅ **Delivered** (email delivered to recipient)
+   - ✅ **Open** (recipient opened email)
+   - ✅ **Click** (recipient clicked link)
+   - ✅ **Bounce** (email bounced)
+   - ✅ **Blocked** (email blocked)
+   - ✅ **Dropped** (email dropped)
+   - ✅ **Spam Report** (marked as spam)
 5. Set status to **Enabled**
-6. Click **Save**
+6. **Copy the Verification Key** and add it to your `.env.local` as `SENDGRID_WEBHOOK_VERIFICATION_KEY`
+7. Click **Save**
 
-### 3. Test the Webhook
+### 3. Verify Sender Email
 
-SendGrid will now send events to your app when recipients open emails. The "Opened" badge will appear next to emails that have been opened, showing the open count on hover.
+Before sending emails, verify your sender email in SendGrid:
+1. Go to [SendGrid Settings > Sender Authentication](https://app.sendgrid.com/settings/sender_auth)
+2. Verify your sender email address
+3. Use this verified email as `FROM_EMAIL` in your `.env.local`
+
+### 4. Test the Webhook
+
+SendGrid will automatically send events to your app. The dashboard will show:
+- **Sent**: Email accepted by SendGrid
+- **Delivered**: Email delivered to recipient's mailbox
+- **Opened**: Recipient opened the email (with IP, location, device info)
+- **Failed/Blocked**: Email failed or was blocked
 
 ## Deployment
 
@@ -142,12 +169,16 @@ SendGrid will now send events to your app when recipients open emails. The "Open
 
 ### Environment Variables for Production
 
-Make sure to set these in your deployment platform:
+Make sure to set these in your deployment platform (Vercel, etc.):
 
-- `DATABASE_URL`
-- `SENDGRID_API_KEY`
-- `FROM_EMAIL`
-- `FROM_NAME`
+**Required:**
+- `DATABASE_URL` - PostgreSQL connection string
+- `SENDGRID_API_KEY` - SendGrid API key
+- `FROM_EMAIL` - Verified sender email
+- `FROM_NAME` - Sender display name
+
+**Optional:**
+- `SENDGRID_WEBHOOK_VERIFICATION_KEY` - Webhook signature verification key (recommended for security)
 
 ## Free Tier Limits
 

@@ -180,6 +180,12 @@ export async function POST(request: NextRequest) {
 
         // 2. Update the email's current status
         if (event.event === 'open') {
+          // Get current open count before incrementing
+          const email = await prisma.email.findUnique({
+            where: { id: event.emailId },
+            select: { openCount: true },
+          });
+          
           await prisma.email.update({
             where: { id: event.emailId },
             data: {
@@ -191,6 +197,7 @@ export async function POST(request: NextRequest) {
               geoLocation: geoLocation,
             },
           });
+
         } else if (['bounce', 'blocked', 'dropped', 'spamreport'].includes(event.event)) {
           await prisma.email.update({
             where: { id: event.emailId },

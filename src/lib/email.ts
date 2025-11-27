@@ -31,21 +31,9 @@ export function replacePlaceholders(text: string, email: Email): string {
 }
 
 /**
- * Generate tracking pixel HTML
- */
-function getTrackingPixel(emailId: string): string {
-  // Use configured APP_URL or default to Vercel URL
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://auto-email-plum.vercel.app';
-  
-  // Add timestamp to prevent caching
-  const trackingUrl = `${baseUrl}/api/track/${emailId}?t=${Date.now()}`;
-  
-  return `<img src="${trackingUrl}" width="1" height="1" style="display:none;width:1px;height:1px;border:0;" alt="" />`;
-}
-
-/**
  * Send email via SendGrid
- * Includes custom tracking pixel for manual tracking (in addition to SendGrid's built-in tracking)
+ * Uses SendGrid's built-in tracking (open, click, delivered, bounce, etc.)
+ * All tracking is handled via SendGrid webhooks - no custom tracking needed
  */
 export async function sendEmail(
   to: string,
@@ -62,14 +50,6 @@ export async function sendEmail(
   }
 
   try {
-    // Add our custom tracking pixel if emailId provided
-    // This works alongside SendGrid's built-in open tracking
-    let finalHtml = htmlBody;
-    if (emailId) {
-      const trackingPixel = getTrackingPixel(emailId);
-      finalHtml = `${htmlBody}${trackingPixel}`;
-    }
-
     await sgMail.send({
       to,
       from: {
@@ -77,22 +57,25 @@ export async function sendEmail(
         name: process.env.FROM_NAME || 'Email Sender',
       },
       subject,
-      html: finalHtml,
-      text: htmlBody.replace(/<[^>]*>/g, ''), // Plain text version (no pixel)
-      // SendGrid's built-in tracking (will also send webhooks)
+      html: htmlBody,
+      text: htmlBody.replace(/<[^>]*>/g, ''), // Plain text version
+      // SendGrid's built-in tracking - all handled via webhooks
       trackingSettings: {
         openTracking: {
-          enable: true,
+          enable: true, // Track email opens
         },
         clickTracking: {
-          enable: false, // We only track opens
+          enable: true, // Track link clicks
+        },
+        subscriptionTracking: {
+          enable: false, // Disable unsubscribe footer
         },
       },
       // Pass emailId in custom args so webhook can identify the email
       customArgs: emailId ? { emailId } : undefined,
     });
 
-    console.log(`Email sent via SendGrid to ${to} (with tracking pixel and webhook)`);
+    console.log(`Email sent via SendGrid to ${to} (tracking via SendGrid webhooks)`);
     return { success: true };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown SendGrid error';
@@ -123,7 +106,7 @@ export function processEmailBody(body: string): string {
  * Flow:
  * 1. Replace placeholders in plain text
  * 2. Save PLAIN TEXT to database (sentBody)
- * 3. Convert to HTML + add tracking pixel ONLY for sending
+ * 3. Convert to HTML for sending (SendGrid handles all tracking via webhooks)
  */
 export async function sendTemplatedEmail(
   email: Email,
@@ -136,10 +119,10 @@ export async function sendTemplatedEmail(
   // Step 2: Convert to HTML ONLY for sending (not for storage)
   const htmlBodyForEmail = processEmailBody(personalizedBodyPlainText);
 
-  // Step 3: Send email with HTML body (tracking pixel added inside sendEmail)
+  // Step 3: Send email with HTML body (SendGrid handles all tracking)
   const result = await sendEmail(email.email, personalizedSubject, htmlBodyForEmail, email.id);
   
-  // Step 4: Return PLAIN TEXT for storage in database (no HTML, no tracking pixel)
+  // Step 4: Return PLAIN TEXT for storage in database (no HTML)
   return {
     ...result,
     sentSubject: personalizedSubject,

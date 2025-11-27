@@ -9,7 +9,6 @@ import EmailListTable from '@/components/EmailListTable';
 import ConfirmModal from '@/components/ConfirmModal';
 import EmailDetailModal from '@/components/EmailDetailModal';
 import MessageModal from '@/components/MessageModal';
-import { usePusher } from '@/hooks/usePusher';
 
 type SendMode = 'all' | 'selected' | null;
 
@@ -30,49 +29,6 @@ export default function Home() {
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [messageEmail, setMessageEmail] = useState<Email | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // Handle real-time email opened event from Pusher
-  const handleEmailOpened = useCallback((data: {
-    emailId: string;
-    status: string;
-    openedAt?: string;
-    openCount?: number;
-    ipAddress?: string;
-    userAgent?: string;
-    geoLocation?: string;
-  }) => {
-    console.log('📧 Real-time update received:', data);
-    
-    // Update the email in state
-    setEmails((prev) =>
-      prev.map((email) =>
-        email.id === data.emailId
-          ? {
-              ...email,
-              status: data.status as Status,
-              openedAt: data.openedAt ? new Date(data.openedAt) : email.openedAt,
-              openCount: data.openCount ?? email.openCount,
-              ipAddress: data.ipAddress ?? email.ipAddress,
-              userAgent: data.userAgent ?? email.userAgent,
-              geoLocation: data.geoLocation ?? email.geoLocation,
-            }
-          : email
-      )
-    );
-
-    // Show toast notification
-    const email = emails.find((e) => e.id === data.emailId);
-    toast.success(
-      `📧 ${email?.name || email?.email || 'Someone'} opened your email!`,
-      { duration: 4000 }
-    );
-  }, [emails]);
-
-  // Connect to Pusher for real-time updates
-  usePusher({
-    onEmailOpened: handleEmailOpened,
-    enabled: true,
-  });
 
   // Fetch emails
   const fetchEmails = useCallback(async () => {
