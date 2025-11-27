@@ -112,11 +112,18 @@ export async function GET(
   const debug = request.nextUrl.searchParams.get('debug') === 'true';
   
   // Get tracking data from request
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() 
-    || request.headers.get('x-real-ip') 
-    || 'Unknown';
+  // Note: Gmail proxies images through googleusercontent.com, so IP will be Google's, not recipient's
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  const realIp = request.headers.get('x-real-ip');
+  const ip = forwardedFor?.split(',')[0]?.trim() || realIp || 'Unknown';
+  
   const userAgent = request.headers.get('user-agent') || 'Unknown';
   const timestamp = new Date();
+  
+  // Detect if request came through Gmail proxy
+  const isGmailProxy = userAgent.includes('GoogleImageProxy') || 
+                       userAgent.includes('Google') ||
+                       forwardedFor?.includes('googleusercontent');
   
   // If debug mode, return info as JSON instead of pixel
   if (debug) {
@@ -135,7 +142,7 @@ export async function GET(
   }
   
   console.log(`📧 Email opened: ${emailId}`);
-  console.log(`   IP: ${ip}`);
+  console.log(`   IP: ${ip}${isGmailProxy ? ' (Gmail Proxy - not recipient IP)' : ''}`);
   console.log(`   User-Agent: ${userAgent}`);
 
   // Process tracking BEFORE returning response (required for serverless)
