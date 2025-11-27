@@ -10,6 +10,7 @@ interface EmailListTableProps {
   onRetry: (id: string) => Promise<void>;
   onSendAll: () => Promise<void>;
   onSendSelected: (ids: string[]) => Promise<void>;
+  onEmailClick: (email: Email) => void;
   isDeleting: string | null;
   isRetrying: string | null;
   isSending: boolean;
@@ -21,18 +22,31 @@ export default function EmailListTable({
   onRetry,
   onSendAll,
   onSendSelected,
+  onEmailClick,
   isDeleting,
   isRetrying,
   isSending,
 }: EmailListTableProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const readyEmails = emails.filter((e) => e.status === 'READY');
+  // Filter emails by search term
+  const filteredEmails = emails.filter((email) => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      email.email.toLowerCase().includes(term) ||
+      email.name?.toLowerCase().includes(term) ||
+      email.country?.toLowerCase().includes(term)
+    );
+  });
+
+  const readyEmails = filteredEmails.filter((e) => e.status === 'READY');
   const readyCount = readyEmails.length;
-  const sentCount = emails.filter((e) => e.status === 'SENT').length;
-  const deliveredCount = emails.filter((e) => e.status === 'DELIVERED').length;
-  const openedCount = emails.filter((e) => e.status === 'OPENED').length;
-  const failedCount = emails.filter((e) => ['FAILED', 'BLOCKED', 'DROPPED'].includes(e.status)).length;
+  const sentCount = filteredEmails.filter((e) => e.status === 'SENT').length;
+  const deliveredCount = filteredEmails.filter((e) => e.status === 'DELIVERED').length;
+  const openedCount = filteredEmails.filter((e) => e.status === 'OPENED').length;
+  const failedCount = filteredEmails.filter((e) => ['FAILED', 'BLOCKED', 'DROPPED'].includes(e.status)).length;
 
   // Count selected emails that are READY
   const selectedReadyCount = readyEmails.filter((e) => selectedIds.has(e.id)).length;
@@ -83,7 +97,7 @@ export default function EmailListTable({
     <div className="flex flex-col h-full">
       {/* Header with stats and send buttons */}
       <div className="flex flex-col gap-3 mb-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-semibold text-white flex items-center gap-2">
               <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -91,18 +105,50 @@ export default function EmailListTable({
               </svg>
               Recipients ({emails.length})
             </h2>
-<div className="flex items-center gap-2 text-xs flex-wrap">
-            <span className="text-gray-400">Ready: {readyCount}</span>
-            <span className="text-gray-600">|</span>
-            <span className="text-yellow-400">Sent: {sentCount}</span>
-            <span className="text-gray-600">|</span>
-            <span className="text-green-400">Delivered: {deliveredCount}</span>
-            <span className="text-gray-600">|</span>
-            <span className="text-purple-400">Opened: {openedCount}</span>
-            <span className="text-gray-600">|</span>
-            <span className="text-red-400">Failed: {failedCount}</span>
           </div>
+          
+          {/* Search Input */}
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by email, name, country..."
+              className="w-64 pl-10 pr-4 py-2 bg-[var(--input-bg)] border border-[var(--card-border)] rounded-lg text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
           </div>
+        </div>
+        
+        {/* Stats row */}
+        <div className="flex items-center gap-2 text-xs flex-wrap">
+          <span className="text-gray-400">Ready: {readyCount}</span>
+          <span className="text-gray-600">|</span>
+          <span className="text-yellow-400">Sent: {sentCount}</span>
+          <span className="text-gray-600">|</span>
+          <span className="text-green-400">Delivered: {deliveredCount}</span>
+          <span className="text-gray-600">|</span>
+          <span className="text-purple-400">Opened: {openedCount}</span>
+          <span className="text-gray-600">|</span>
+          <span className="text-red-400">Failed: {failedCount}</span>
+          {searchTerm && (
+            <>
+              <span className="text-gray-600">|</span>
+              <span className="text-blue-400">Showing: {filteredEmails.length}</span>
+            </>
+          )}
         </div>
 
         {/* Send buttons row */}
@@ -161,13 +207,22 @@ export default function EmailListTable({
 
       {/* Table container */}
       <div className="flex-1 overflow-auto rounded-lg border border-[var(--card-border)]">
-        {emails.length === 0 ? (
+        {filteredEmails.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-12 text-gray-400">
             <svg className="w-12 h-12 mb-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
             </svg>
-            <p className="text-sm">No recipients added yet</p>
-            <p className="text-xs text-gray-500 mt-1">Add emails using the form on the left</p>
+            {searchTerm ? (
+              <>
+                <p className="text-sm">No results found</p>
+                <p className="text-xs text-gray-500 mt-1">Try a different search term</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm">No recipients added yet</p>
+                <p className="text-xs text-gray-500 mt-1">Add emails using the form on the left</p>
+              </>
+            )}
           </div>
         ) : (
           <table className="w-full">
@@ -204,18 +259,19 @@ export default function EmailListTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--card-border)]">
-              {emails.map((email) => {
+              {filteredEmails.map((email) => {
                 const isSelected = selectedIds.has(email.id);
                 const isReady = email.status === 'READY';
 
                 return (
                   <tr
                     key={email.id}
-                    className={`bg-[var(--card-bg)]/50 hover:bg-[var(--card-bg)] transition-colors animate-slide-up ${
+                    onClick={() => onEmailClick(email)}
+                    className={`bg-[var(--card-bg)]/50 hover:bg-[var(--card-bg)] transition-colors animate-slide-up cursor-pointer ${
                       isSelected ? 'bg-blue-500/10' : ''
                     }`}
                   >
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       {/* Row checkbox - only for READY emails */}
                       <button
                         type="button"
@@ -249,7 +305,7 @@ export default function EmailListTable({
                     <td className="px-4 py-3 hidden lg:table-cell">
                       <span className="text-sm text-gray-300">{email.country || '-'}</span>
                     </td>
-                    <td className="px-4 py-3 hidden xl:table-cell">
+                    <td className="px-4 py-3 hidden xl:table-cell" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-2">
                         {email.linkedin && (
                           <a
@@ -326,7 +382,7 @@ export default function EmailListTable({
                         <span className="text-gray-500 text-xs">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-2">
                         {['FAILED', 'BLOCKED', 'DROPPED'].includes(email.status) && (
                           <button
