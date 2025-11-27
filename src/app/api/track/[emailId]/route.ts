@@ -14,30 +14,40 @@ interface GeoData {
 }
 
 /**
- * Get geolocation from IP address using free ip-api.com service
+ * Get geolocation from IP address using free ipapi.co service (HTTPS)
  */
 async function getGeoFromIP(ip: string): Promise<GeoData | null> {
   // Skip for localhost/private IPs
-  if (ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.')) {
+  if (ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.') || ip === 'Unknown') {
     return null;
   }
 
   try {
-    const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,city,regionName`, {
-      // Short timeout to not delay pixel response
-      signal: AbortSignal.timeout(2000),
+    // Using ipapi.co which supports HTTPS and has free tier (1000 requests/day)
+    const response = await fetch(`https://ipapi.co/${ip}/json/`, {
+      signal: AbortSignal.timeout(3000),
+      headers: {
+        'User-Agent': 'EmailTracker/1.0',
+      },
     });
+    
+    if (!response.ok) {
+      console.error('Geo lookup failed:', response.status);
+      return null;
+    }
     
     const data = await response.json();
     
-    if (data.status === 'success') {
-      return {
-        country: data.country,
-        city: data.city,
-        region: data.regionName,
-      };
+    if (data.error) {
+      console.error('Geo lookup error:', data.reason);
+      return null;
     }
-    return null;
+    
+    return {
+      country: data.country_name,
+      city: data.city,
+      region: data.region,
+    };
   } catch (error) {
     console.error('Geo lookup error:', error);
     return null;
