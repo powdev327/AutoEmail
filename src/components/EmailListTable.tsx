@@ -12,9 +12,11 @@ interface EmailListTableProps {
   onSendSelected: (ids: string[]) => Promise<void>;
   onEmailClick: (email: Email) => void;
   onMessageClick: (email: Email) => void;
+  onRefresh: () => Promise<void>;
   isDeleting: string | null;
   isRetrying: string | null;
   isSending: boolean;
+  isRefreshing: boolean;
 }
 
 export default function EmailListTable({
@@ -25,9 +27,11 @@ export default function EmailListTable({
   onSendSelected,
   onEmailClick,
   onMessageClick,
+  onRefresh,
   isDeleting,
   isRetrying,
   isSending,
+  isRefreshing,
 }: EmailListTableProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
@@ -100,13 +104,30 @@ export default function EmailListTable({
       {/* Header with stats and send buttons */}
       <div className="flex flex-col gap-3 mb-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <h2 className="text-lg font-semibold text-white flex items-center gap-2">
               <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               Recipients ({emails.length})
             </h2>
+            {/* Refresh button */}
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+              title="Refresh status"
+            >
+              <svg 
+                className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
           </div>
           
           {/* Search Input */}
